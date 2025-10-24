@@ -1,0 +1,64 @@
+name: Prune old monitoring logs
+
+on:
+  schedule:
+    # Roda diariamente às 03:00 UTC (~00:00 em America/Fortaleza)
+    - cron: "0 3 * * *"
+  workflow_dispatch: {}  # permite rodar manualmente
+
+permissions:
+  contents: write   # necessário para commitar/push
+
+env:
+  KEEP_DAYS: "7"    # ajuste aqui quantos dias manter
+  BRANCH: "main"    # ajuste se seu branch padrão for outro
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BRANCH }}
+          fetch-depth: 0
+
+      - name: Remove old CSVs by date in filename
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Mantendo arquivos dos últimos ${KEEP_DAYS} dias."
+
+          # Data de corte (UTC no runner)
+          CUTOFF_EPOCH=$(date -d "${KEEP_DAYS} days ago 00:00:00" +%s)
+
+          deleted=0
+          shopt -s nullglob
+          for f in log_meet_monitoring_*_*.csv; do
+            [[ -f "$f" ]] || continue
+            # >>> NÃO use aspas no regex e ancore com ^ ... $
+            if [[ "$f" =~ ^log_meet_monitoring_(MacOS|Windows)_([0-9]{2})-([0-9]{2})-([0-9]{2})\.csv$ ]]; then
+              dd="${BASH_REMATCH[2]}"
+              mm="${BASH_REMATCH[3]}"
+              yy="${BASH_REMATCH[4]}"
+              # Converte DD-MM-YY -> YYYY-MM-DD (assumindo 20YY)
+              if file_epoch=$(date -d "20${yy}-${mm}-${dd} 00:00:00" +%s); then
+                if (( file_epoch < CUTOFF_EPOCH )); then
+                  echo "Apagando $f (data 20${yy}-${mm}-${dd})"
+                  git rm -f -- "$f"
+                  ((deleted++))
+                fi
+              fi
+            fi
+          done
+
+          if (( deleted == 0 )); then
+            echo "Nenhum arquivo para apagar."
+            exit 0
+          fi
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: prune old monitoring logs (>${KEEP_DAYS} days) [skip ci]"
+          git push origin "${BRANCH}"
