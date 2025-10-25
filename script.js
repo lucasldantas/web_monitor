@@ -37,12 +37,12 @@ function mapScore(status) {
     }
 }
 
-// Função para construir o nome do arquivo dinamicamente
+// Função para construir o nome do arquivo dinamicamente (CORRIGIDO PARA O SEU PADRÃO)
 function getFileName() {
     const os = document.getElementById('osSelect').value; // 'MacOS' ou 'Windows'
     const date = document.getElementById('dateSelect').value; // 'DD-MM-YY'
     
-    // log_meet_monitoring_MacOS_25-10-25.csv
+    // O nome do arquivo AGORA segue o padrão: log_meet_monitoring_OS_DD-MM-YY.csv
     return `log_meet_monitoring_${os}_${date}.csv`;
 }
 
@@ -142,13 +142,12 @@ function drawChart(dataToDisplay) {
 }
 
 
-// Função para filtrar os dados e redesenhar o gráfico (é chamada por initMonitor)
+// Função para filtrar os dados e redesenhar o gráfico
 function filterChart() {
     const startTimeStr = document.getElementById('startTime').value;
     const endTimeStr = document.getElementById('endTime').value;
 
     if (!allData || allData.length === 0) {
-        // Não faz nada se os dados ainda não foram carregados ou estão vazios
         return; 
     }
 
@@ -167,7 +166,7 @@ function filterChart() {
     drawChart(filteredData);
 }
 
-// Função principal chamada pelo botão para carregar o arquivo e filtrar
+// Função principal chamada pelo botão para carregar o arquivo e filtrar (ESTA FUNÇÃO ESTAVA FALTANDO OU ERRADA)
 function initMonitor() {
     const statusElement = document.getElementById('statusMessage');
     const fileName = getFileName();
