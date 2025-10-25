@@ -3,25 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitoramento de Conexão</title>
+    <title>Monitoramento de Conexão - Visualização</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    
     <style>
-        /* Estilos básicos para o container do gráfico */
-        #chart-container {
-            width: 80%;
-            margin: 50px auto;
-            max-height: 600px;
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
         }
         h1 {
             text-align: center;
-            font-family: Arial, sans-serif;
+            color: #333;
+            margin-top: 20px;
+        }
+        #controls {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #fff;
+            border-bottom: 1px solid #ddd;
+        }
+        #controls label, #controls button {
+            margin: 0 5px;
+            font-size: 1em;
+        }
+        #controls input[type="time"] {
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        #controls button {
+            padding: 5px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #controls button:hover {
+            background-color: #45a049;
+        }
+        #chart-container {
+            width: 90%;
+            margin: 30px auto;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            max-height: 500px;
         }
     </style>
 </head>
 <body>
 
     <h1>Qualidade da Conexão por Hora</h1>
+
+    <div id="controls">
+        <label for="startTime">Início (HH:MM):</label>
+        <input type="time" id="startTime" value="00:00">
+        
+        <label for="endTime" style="margin-left: 15px;">Fim (HH:MM):</label>
+        <input type="time" id="endTime" value="23:59">
+        
+        <button onclick="filterChart()">Filtrar Gráfico</button>
+    </div>
 
     <div id="chart-container">
         <canvas id="qualityChart"></canvas>
