@@ -1,202 +1,101 @@
-let allData = [];
-let chartInstance = null;
-
-// Função para formatar a data atual no padrão DD-MM-YY
-function getCurrentDateFormatted() {
-    const today = new Date();
-    // Pega o dia (DD) e adiciona um '0' se for menor que 10
-    const dd = String(today.getDate()).padStart(2, '0');
-    // Pega o mês (MM) e adiciona um '0' se for menor que 10
-    const mm = String(today.getMonth() + 1).padStart(2, '0'); // Mês começa do 0
-    // Pega o ano (YY)
-    const yy = String(today.getFullYear()).slice(-2);
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoramento de Conexão - Visualização</title>
     
-    // Retorna no formato DD-MM-YY
-    return `${dd}-${mm}-${yy}`;
-}
-
-// Preenche o campo de data com a data atual ao carregar a página
-window.onload = function() {
-    document.getElementById('dateSelect').value = getCurrentDateFormatted();
-    // Chama a inicialização para carregar os logs do dia atual (exemplo)
-    initMonitor(); 
-}
-
-// Função para mapear o status de texto para um valor numérico para o gráfico
-function mapScore(status) {
-    if (!status) return 0;
-    switch (status.toLowerCase()) {
-        case 'excelente':
-            return 100;
-        case 'bom':
-            return 75;
-        case 'ruim':
-            return 25;
-        default:
-            return 0; 
-    }
-}
-
-// Função para construir o nome do arquivo dinamicamente (CORRIGIDO PARA O SEU PADRÃO)
-function getFileName() {
-    const os = document.getElementById('osSelect').value; // 'MacOS' ou 'Windows'
-    const date = document.getElementById('dateSelect').value; // 'DD-MM-YY'
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     
-    // O nome do arquivo AGORA segue o padrão: log_meet_monitoring_OS_DD-MM-YY.csv
-    return `log_meet_monitoring_${os}_${date}.csv`;
-}
-
-// --------------------------------------------------------------------------
-// Funções de Carregamento e Desenho
-// --------------------------------------------------------------------------
-
-// Função para criar e renderizar o gráfico Chart.js
-function drawChart(dataToDisplay) {
-    const statusElement = document.getElementById('statusMessage');
-
-    if (chartInstance) {
-        chartInstance.destroy();
-    }
-    
-    if (dataToDisplay.length === 0) {
-        statusElement.textContent = "Nenhum dado encontrado no intervalo selecionado.";
-        return;
-    }
-
-    statusElement.textContent = ""; // Limpa a mensagem de status
-    
-    const labels = [];
-    const dataScores = [];
-    const backgroundColors = [];
-
-    dataToDisplay.forEach(row => {
-        const timestamp = row.Timestamp;
-        const scoreStatus = row['Connection_Health_Status'];
-        const score = mapScore(scoreStatus);
-        
-        const timeOnly = timestamp.split(' ')[1]; 
-        labels.push(timeOnly.substring(0, 5));
-        dataScores.push(score);
-
-        // Define cores para os pontos
-        if (score === 100) backgroundColors.push('#4BC0C0');
-        else if (score === 75) backgroundColors.push('#FFCD56');
-        else backgroundColors.push('#FF6384'); 
-    });
-
-    const ctx = document.getElementById('qualityChart').getContext('2d');
-
-    chartInstance = new Chart(ctx, { 
-        type: 'line', 
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Qualidade da Conexão (Score)',
-                data: dataScores,
-                borderColor: '#36A2EB',
-                backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                tension: 0.3, 
-                pointBackgroundColor: backgroundColors,
-                pointRadius: 5,
-                borderWidth: 2,
-                fill: false
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Horário do Monitoramento (HH:MM)'
-                    }
-                },
-                y: {
-                    title: {
-                        display: true,
-                        text: 'Qualidade (Score)'
-                    },
-                    min: 0,
-                    max: 100,
-                    ticks: {
-                        stepSize: 25,
-                        callback: function(value) {
-                            if (value === 100) return 'Excelente';
-                            if (value === 75) return 'Bom';
-                            if (value === 25) return 'Ruim';
-                            if (value === 0) return 'Falha/Outro';
-                            return '';
-                        }
-                    }
-                }
-            },
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Evolução do Score de Qualidade da Conexão no Intervalo'
-                }
-            }
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
         }
-    });
-}
-
-
-// Função para filtrar os dados e redesenhar o gráfico
-function filterChart() {
-    const startTimeStr = document.getElementById('startTime').value;
-    const endTimeStr = document.getElementById('endTime').value;
-
-    if (!allData || allData.length === 0) {
-        return; 
-    }
-
-    const filteredData = allData.filter(row => {
-        const timestamp = row.Timestamp;
-        if (!timestamp) return false;
-        
-        const timeOnly = timestamp.split(' ')[1]; 
-
-        const filterStart = startTimeStr + ':00';
-        const filterEnd = endTimeStr + ':59';
-
-        return timeOnly >= filterStart && timeOnly <= filterEnd;
-    });
-
-    drawChart(filteredData);
-}
-
-// Função principal chamada pelo botão para carregar o arquivo e filtrar (ESTA FUNÇÃO ESTAVA FALTANDO OU ERRADA)
-function initMonitor() {
-    const statusElement = document.getElementById('statusMessage');
-    const fileName = getFileName();
-
-    statusElement.textContent = `Carregando: ${fileName}...`;
-    allData = []; // Limpa dados anteriores
-
-    Papa.parse(fileName, {
-        download: true, 
-        header: true,   
-        skipEmptyLines: true,
-        complete: function(results) {
-            
-            allData = results.data.filter(row => row.Timestamp && row['Connection_Health_Status']); 
-
-            if (allData.length === 0) {
-                statusElement.textContent = `Erro: Nenhuma linha de dados válida em ${fileName}.`;
-                if (chartInstance) chartInstance.destroy();
-                return;
-            }
-            
-            statusElement.textContent = `Sucesso! Carregado ${allData.length} registros de ${fileName}.`;
-
-            // Agora que os dados estão carregados, aplique o filtro de tempo
-            filterChart(); 
-        },
-        error: function(error) {
-            console.error("Erro ao carregar o CSV:", error);
-            statusElement.textContent = `ERRO 404: Não foi possível encontrar o arquivo ${fileName}. Verifique a data e o nome.`;
-            if (chartInstance) chartInstance.destroy();
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-top: 20px;
         }
-    });
-}
+        #controls {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #fff;
+            border-bottom: 1px solid #ddd;
+            /* Flexbox para melhor alinhamento em diferentes tamanhos de tela */
+            display: flex; 
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px; /* Espaço entre os elementos */
+        }
+        #controls label, #controls button, #controls select, #controls input {
+            margin: 0; /* Remove margem desnecessária criada anteriormente */
+            font-size: 1em;
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        #controls input[type="text"] {
+            min-width: 150px; /* Garante que o campo hostname seja visível */
+        }
+        #controls button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #controls button:hover {
+            background-color: #45a049;
+        }
+        #chart-container {
+            width: 90%;
+            margin: 30px auto;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            max-height: 500px;
+        }
+        #qualityChart {
+            max-height: 460px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Qualidade da Conexão por Hora</h1>
+
+    <div id="controls">
+        <label for="osSelect">Sistema Operacional:</label>
+        <select id="osSelect">
+            <option value="MacOS">Mac</option>
+            <option value="Windows">Windows</option>
+        </select>
+
+        <label for="dateSelect">Data do Log:</label>
+        <input type="text" id="dateSelect" pattern="\d{2}-\d{2}-\d{2}" placeholder="DD-MM-YY">
+        
+        <label for="hostnameFilter">Hostname:</label>
+        <input type="text" id="hostnameFilter" placeholder="Ex: ARCO-CD28F..." oninput="filterChart()"> <label for="startTime">Início (HH:MM):</label>
+        <input type="time" id="startTime" value="00:00" onchange="filterChart()">
+        
+        <label for="endTime">Fim (HH:MM):</label>
+        <input type="time" id="endTime" value="23:59" onchange="filterChart()">
+        
+        <button onclick="initMonitor()">Carregar Novo Log</button>
+    </div>
+
+    <div id="chart-container">
+        <canvas id="qualityChart"></canvas>
+        <p id="statusMessage" style="text-align:center; color: #cc0000; font-weight: bold;"></p>
+    </div>
+
+    <script src="script.js"></script>
+
+</body>
+</html>
