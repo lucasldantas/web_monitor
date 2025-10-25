@@ -92,21 +92,10 @@ function getFileName() {
     return `log_meet_monitoring_${os}_${date}.csv`;
 }
 
-// NOVO: Função auxiliar para atualizar cores do gráfico (chamada ao mudar o tema)
+// Função auxiliar para atualizar cores do gráfico (chamada ao mudar o tema)
 function updateChartTheme(isDark) {
+    // Esta função será melhor aplicada na criação do gráfico, mas a deixamos aqui para garantir a consistência
     if (chartInstance) {
-        // Define as cores do texto e grade do Chart.js
-        const color = isDark ? '#f0f0f0' : '#333';
-        const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-        
-        chartInstance.options.color = color;
-        chartInstance.options.scales.x.grid.color = gridColor;
-        chartInstance.options.scales.x.ticks.color = color;
-        chartInstance.options.scales.y.grid.color = gridColor;
-        chartInstance.options.scales.y.ticks.color = color;
-        chartInstance.options.plugins.title.color = color;
-        chartInstance.options.plugins.legend.labels.color = color;
-        
         chartInstance.update();
     }
 }
@@ -128,25 +117,36 @@ function drawChart(dataToDisplay) {
     
     const labels = [];
     const dataScores = [];
-    const backgroundColors = [];
+    const dataLatency = []; // Novo array para os dados de Latência
+    const scorePointColors = [];
     
     const isDark = document.body.classList.contains('dark-mode');
     const color = isDark ? '#f0f0f0' : '#333';
     const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
 
+    // Determina a Latência Máxima no conjunto de dados para definir o eixo Y (opcional, mas bom para visualização)
+    let maxLatency = 0;
+
     dataToDisplay.forEach(row => {
         const timestamp = row.Timestamp;
         const scoreStatus = row['Connection_Health_Status'];
         const score = mapScore(scoreStatus);
+        const latency = parseFloat(row['TCP_Latency_ms']) || 0; // Pega o valor de Latência
         
         const timeOnly = timestamp.split(' ')[1]; 
         labels.push(timeOnly.substring(0, 5));
         dataScores.push(score);
+        dataLatency.push(latency); // Adiciona o valor de latência
 
-        if (score === 100) backgroundColors.push('#4BC0C0');
-        else if (score === 75) backgroundColors.push('#FFCD56');
-        else backgroundColors.push('#FF6384'); 
+        if (latency > maxLatency) maxLatency = latency;
+
+        if (score === 100) scorePointColors.push('#4BC0C0');
+        else if (score === 75) scorePointColors.push('#FFCD56');
+        else scorePointColors.push('#FF6384'); 
     });
+
+    // Garante que o eixo Y de Latência tenha uma escala visualmente útil
+    const latencyMaxScale = Math.ceil((maxLatency + 100) / 500) * 500; // Arredonda para o próximo múltiplo de 500
 
     const ctx = document.getElementById('qualityChart').getContext('2d');
 
@@ -154,30 +154,52 @@ function drawChart(dataToDisplay) {
         type: 'line', 
         data: {
             labels: labels,
-            datasets: [{
-                label: 'Qualidade da Conexão (Score)',
-                data: dataScores,
-                borderColor: isDark ? '#A0D8FF' : '#36A2EB', // Azul mais claro no tema escuro
-                backgroundColor: isDark ? 'rgba(160, 216, 255, 0.2)' : 'rgba(54, 162, 235, 0.2)',
-                tension: 0.3, 
-                pointBackgroundColor: backgroundColors,
-                pointRadius: 5,
-                borderWidth: 2,
-                fill: false
-            }]
+            datasets: [
+                {
+                    label: 'Qualidade (Score)',
+                    data: dataScores,
+                    yAxisID: 'y-score', // Eixo Y PRIMÁRIO (Esquerda)
+                    borderColor: isDark ? '#A0D8FF' : '#36A2EB',
+                    backgroundColor: isDark ? 'rgba(160, 216, 255, 0.2)' : 'rgba(54, 162, 235, 0.2)',
+                    pointBackgroundColor: scorePointColors,
+                    tension: 0.3, 
+                    pointRadius: 5,
+                    borderWidth: 2,
+                    fill: false,
+                    order: 1 // Desenha primeiro
+                },
+                {
+                    label: 'Latência (ms)',
+                    data: dataLatency,
+                    yAxisID: 'y-latency', // Eixo Y SECUNDÁRIO (Direita)
+                    borderColor: isDark ? '#FF6384' : '#E84A5F', // Cor contrastante para Latência
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                    tension: 0.3,
+                    pointRadius: 3,
+                    borderWidth: 2,
+                    fill: false,
+                    order: 2 // Desenha por cima
+                }
+            ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            // Configurações de tema incluídas aqui
             color: color, 
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
             scales: {
                 x: {
                     title: { display: true, text: 'Horário do Monitoramento (HH:MM)', color: color },
                     grid: { color: gridColor },
                     ticks: { color: color }
                 },
-                y: {
+                // Eixo Y Esquerdo (Score)
+                'y-score': { 
+                    type: 'linear',
+                    position: 'left',
                     title: { display: true, text: 'Qualidade (Score)', color: color },
                     min: 0,
                     max: 100,
@@ -193,15 +215,29 @@ function drawChart(dataToDisplay) {
                             return '';
                         }
                     }
+                },
+                // Eixo Y Direito (Latência)
+                'y-latency': { 
+                    type: 'linear',
+                    position: 'right', // Coloca o eixo à direita
+                    title: { display: true, text: 'Latência TCP (ms)', color: isDark ? '#FF6384' : '#E84A5F' },
+                    min: 0,
+                    max: latencyMaxScale, // Usa a escala dinâmica para Latência
+                    grid: { 
+                        drawOnChartArea: false, // Oculta as linhas de grade para o eixo direito
+                        color: gridColor
+                    },
+                    ticks: {
+                        color: isDark ? '#FF6384' : '#E84A5F' // Cor dos ticks em destaque
+                    }
                 }
             },
             plugins: {
-                title: { display: true, text: `Evolução do Score de Qualidade da Conexão`, color: color },
-                legend: { labels: { color: color } } // Cor da legenda
+                title: { display: true, text: `Evolução da Qualidade e Latência`, color: color },
+                legend: { labels: { color: color } }
             }
         }
     });
-    // Aplica o tema ao novo gráfico (garante que as cores da grade sejam aplicadas)
     updateChartTheme(isDark);
 }
 
@@ -227,7 +263,6 @@ function filterChart() {
 
         // 2. Filtragem por Hostname
         const hostname = row.Hostname;
-        // Se o campo de filtro estiver vazio, o filtro é ignorado.
         const matchesHostname = hostnameFilter === '' || hostname === hostnameFilter; 
         
         return isWithinTime && matchesHostname;
@@ -243,7 +278,6 @@ function initMonitor() {
     statusElement.textContent = `Carregando: ${fileName}...`;
     allData = []; 
 
-    // Limpa o Hostname ao carregar um novo log, para que o gráfico não fique vazio
     document.getElementById('hostnameFilter').value = ""; 
 
     Papa.parse(fileName, {
@@ -252,7 +286,7 @@ function initMonitor() {
         skipEmptyLines: true,
         complete: function(results) {
             
-            allData = results.data.filter(row => row.Timestamp && row['Connection_Health_Status']); 
+            allData = results.data.filter(row => row.Timestamp && row['Connection_Health_Status'] && row['TCP_Latency_ms']); 
 
             if (allData.length === 0) {
                 statusElement.textContent = `Erro: Nenhuma linha de dados válida em ${fileName}.`;
@@ -262,7 +296,6 @@ function initMonitor() {
             
             statusElement.textContent = `Sucesso! Carregado ${allData.length} registros de ${fileName}.`;
 
-            // Aplica o filtro de tempo e hostname
             filterChart(); 
         },
         error: function(error) {
