@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoramento de Conexão</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <style>
+        /* Estilos básicos para o container do gráfico */
+        #chart-container {
+            width: 80%;
+            margin: 50px auto;
+            max-height: 600px;
+        }
+        h1 {
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Qualidade da Conexão por Hora</h1>
+
+    <div id="chart-container">
+        <canvas id="qualityChart"></canvas>
+    </div>
+
+    <script src="script.js"></script>
+
+</body>
+</html>
