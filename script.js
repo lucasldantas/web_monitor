@@ -1,13 +1,33 @@
-const CSV_FILE = 'log_meet_monitoring_MacOS_25-10-25.csv';
-let allData = []; // Variável global para armazenar todos os dados brutos do CSV
-let chartInstance = null; // Variável para armazenar a instância do gráfico
+let allData = [];
+let chartInstance = null;
+
+// Função para formatar a data atual no padrão DD-MM-YY
+function getCurrentDateFormatted() {
+    const today = new Date();
+    // Pega o dia (DD) e adiciona um '0' se for menor que 10
+    const dd = String(today.getDate()).padStart(2, '0');
+    // Pega o mês (MM) e adiciona um '0' se for menor que 10
+    const mm = String(today.getMonth() + 1).padStart(2, '0'); // Mês começa do 0
+    // Pega o ano (YY)
+    const yy = String(today.getFullYear()).slice(-2);
+    
+    // Retorna no formato DD-MM-YY
+    return `${dd}-${mm}-${yy}`;
+}
+
+// Preenche o campo de data com a data atual ao carregar a página
+window.onload = function() {
+    document.getElementById('dateSelect').value = getCurrentDateFormatted();
+    // Chama a inicialização para carregar os logs do dia atual (exemplo)
+    initMonitor(); 
+}
 
 // Função para mapear o status de texto para um valor numérico para o gráfico
 function mapScore(status) {
     if (!status) return 0;
     switch (status.toLowerCase()) {
         case 'excelente':
-            return 100; // Pontuação máxima
+            return 100;
         case 'bom':
             return 75;
         case 'ruim':
@@ -17,13 +37,34 @@ function mapScore(status) {
     }
 }
 
+// Função para construir o nome do arquivo dinamicamente
+function getFileName() {
+    const os = document.getElementById('osSelect').value; // 'MacOS' ou 'Windows'
+    const date = document.getElementById('dateSelect').value; // 'DD-MM-YY'
+    
+    // log_meet_monitoring_MacOS_25-10-25.csv
+    return `log_meet_monitoring_${os}_${date}.csv`;
+}
+
+// --------------------------------------------------------------------------
+// Funções de Carregamento e Desenho
+// --------------------------------------------------------------------------
+
 // Função para criar e renderizar o gráfico Chart.js
 function drawChart(dataToDisplay) {
-    // Se o gráfico já existe, destrua-o para redesenhar
+    const statusElement = document.getElementById('statusMessage');
+
     if (chartInstance) {
         chartInstance.destroy();
     }
+    
+    if (dataToDisplay.length === 0) {
+        statusElement.textContent = "Nenhum dado encontrado no intervalo selecionado.";
+        return;
+    }
 
+    statusElement.textContent = ""; // Limpa a mensagem de status
+    
     const labels = [];
     const dataScores = [];
     const backgroundColors = [];
@@ -33,33 +74,32 @@ function drawChart(dataToDisplay) {
         const scoreStatus = row['Connection_Health_Status'];
         const score = mapScore(scoreStatus);
         
-        // Pega apenas a hora (ex: 00:00:00)
         const timeOnly = timestamp.split(' ')[1]; 
-        labels.push(timeOnly.substring(0, 5)); // Mostra apenas HH:MM
+        labels.push(timeOnly.substring(0, 5));
         dataScores.push(score);
 
         // Define cores para os pontos
-        if (score === 100) backgroundColors.push('#4BC0C0'); // Excelente (Teal)
-        else if (score === 75) backgroundColors.push('#FFCD56'); // Bom (Amarelo)
-        else backgroundColors.push('#FF6384'); // Ruim (Vermelho)
+        if (score === 100) backgroundColors.push('#4BC0C0');
+        else if (score === 75) backgroundColors.push('#FFCD56');
+        else backgroundColors.push('#FF6384'); 
     });
 
     const ctx = document.getElementById('qualityChart').getContext('2d');
 
-    chartInstance = new Chart(ctx, { // Armazena a nova instância
-        type: 'line', // Gráfico de linha para séries temporais
+    chartInstance = new Chart(ctx, { 
+        type: 'line', 
         data: {
-            labels: labels, // Horários (eixo X)
+            labels: labels,
             datasets: [{
                 label: 'Qualidade da Conexão (Score)',
-                data: dataScores, // Valores numéricos (eixo Y)
-                borderColor: '#36A2EB', // Azul da linha
-                backgroundColor: 'rgba(54, 162, 235, 0.2)', // Preenchimento suave
-                tension: 0.3, // Suaviza a linha
-                pointBackgroundColor: backgroundColors, // Cor dos pontos conforme a pontuação
+                data: dataScores,
+                borderColor: '#36A2EB',
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                tension: 0.3, 
+                pointBackgroundColor: backgroundColors,
                 pointRadius: 5,
                 borderWidth: 2,
-                fill: false // Define como false para não preencher a área
+                fill: false
             }]
         },
         options: {
@@ -81,7 +121,6 @@ function drawChart(dataToDisplay) {
                     max: 100,
                     ticks: {
                         stepSize: 25,
-                        // Rótulos personalizados
                         callback: function(value) {
                             if (value === 100) return 'Excelente';
                             if (value === 75) return 'Bom';
@@ -102,66 +141,63 @@ function drawChart(dataToDisplay) {
     });
 }
 
-// Função para filtrar os dados e redesenhar o gráfico
+
+// Função para filtrar os dados e redesenhar o gráfico (é chamada por initMonitor)
 function filterChart() {
-    const startTimeStr = document.getElementById('startTime').value; // Ex: 00:00
-    const endTimeStr = document.getElementById('endTime').value;     // Ex: 23:59
+    const startTimeStr = document.getElementById('startTime').value;
+    const endTimeStr = document.getElementById('endTime').value;
 
     if (!allData || allData.length === 0) {
-        alert("Dados não carregados. Aguarde ou verifique o arquivo CSV.");
-        return;
+        // Não faz nada se os dados ainda não foram carregados ou estão vazios
+        return; 
     }
 
-    // Filtra os dados com base na hora (assumindo que o CSV tem a data no formato 'YYYY-MM-DD HH:MM:SS')
     const filteredData = allData.filter(row => {
         const timestamp = row.Timestamp;
         if (!timestamp) return false;
         
-        // Pega a parte da hora, assumindo que está no formato HH:MM:SS
         const timeOnly = timestamp.split(' ')[1]; 
 
-        // Compara as strings de tempo, garantindo que a comparação inclua os segundos
-        // Adicionamos ':00' ao filtro de hora para ter uma string comparável (HH:MM:SS)
         const filterStart = startTimeStr + ':00';
-        const filterEnd = endTimeStr + ':59'; // Pega até o último segundo do minuto final
+        const filterEnd = endTimeStr + ':59';
 
         return timeOnly >= filterStart && timeOnly <= filterEnd;
     });
 
-    if (filteredData.length === 0) {
-        alert("Nenhum dado encontrado no intervalo selecionado. Tente expandir o filtro.");
-    }
-    
-    // Redesenha o gráfico com os dados filtrados
     drawChart(filteredData);
 }
 
+// Função principal chamada pelo botão para carregar o arquivo e filtrar
+function initMonitor() {
+    const statusElement = document.getElementById('statusMessage');
+    const fileName = getFileName();
 
-// Função principal para carregar o CSV
-function loadAndDrawChart() {
-    Papa.parse(CSV_FILE, {
+    statusElement.textContent = `Carregando: ${fileName}...`;
+    allData = []; // Limpa dados anteriores
+
+    Papa.parse(fileName, {
         download: true, 
         header: true,   
         skipEmptyLines: true,
         complete: function(results) {
-            // Filtra e armazena apenas as linhas que são válidas
+            
             allData = results.data.filter(row => row.Timestamp && row['Connection_Health_Status']); 
 
             if (allData.length === 0) {
-                console.error("Nenhuma linha de dados válida encontrada no CSV.");
-                document.getElementById('chart-container').innerHTML = "<p style='text-align:center;'>Erro: Nenhuma linha de dados válida encontrada.</p>";
+                statusElement.textContent = `Erro: Nenhuma linha de dados válida em ${fileName}.`;
+                if (chartInstance) chartInstance.destroy();
                 return;
             }
             
-            // Desenha o gráfico inicial com todos os dados
-            drawChart(allData); 
+            statusElement.textContent = `Sucesso! Carregado ${allData.length} registros de ${fileName}.`;
+
+            // Agora que os dados estão carregados, aplique o filtro de tempo
+            filterChart(); 
         },
         error: function(error) {
             console.error("Erro ao carregar o CSV:", error);
-            document.getElementById('chart-container').innerHTML = "<p style='text-align:center;'>Erro ao carregar o arquivo CSV. Verifique o console para detalhes.</p>";
+            statusElement.textContent = `ERRO 404: Não foi possível encontrar o arquivo ${fileName}. Verifique a data e o nome.`;
+            if (chartInstance) chartInstance.destroy();
         }
     });
 }
-
-// Inicia o processo quando a página carrega
-loadAndDrawChart();
