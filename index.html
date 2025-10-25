@@ -27,21 +27,17 @@
             background-color: #fff;
             border-bottom: 1px solid #ddd;
         }
-        #controls label, #controls button {
+        #controls label, #controls button, #controls select, #controls input {
             margin: 0 5px;
             font-size: 1em;
-        }
-        #controls input[type="time"] {
             padding: 5px;
-            border: 1px solid #ccc;
             border-radius: 4px;
+            border: 1px solid #ccc;
         }
         #controls button {
-            padding: 5px 15px;
             background-color: #4CAF50;
             color: white;
             border: none;
-            border-radius: 4px;
             cursor: pointer;
             transition: background-color 0.3s;
         }
@@ -57,6 +53,10 @@
             border-radius: 8px;
             max-height: 500px;
         }
+        /* Para garantir que o canvas se estique corretamente */
+        #qualityChart {
+            max-height: 460px;
+        }
     </style>
 </head>
 <body>
@@ -64,17 +64,27 @@
     <h1>Qualidade da Conexão por Hora</h1>
 
     <div id="controls">
-        <label for="startTime">Início (HH:MM):</label>
+        <label for="osSelect">Sistema Operacional:</label>
+        <select id="osSelect">
+            <option value="MacOS">Mac</option>
+            <option value="Windows">Windows</option>
+        </select>
+
+        <label for="dateSelect">Data do Log:</label>
+        <input type="text" id="dateSelect" pattern="\d{2}-\d{2}-\d{2}" placeholder="DD-MM-YY">
+        
+        <label for="startTime" style="margin-left: 15px;">Início (HH:MM):</label>
         <input type="time" id="startTime" value="00:00">
         
         <label for="endTime" style="margin-left: 15px;">Fim (HH:MM):</label>
         <input type="time" id="endTime" value="23:59">
         
-        <button onclick="filterChart()">Filtrar Gráfico</button>
+        <button onclick="initMonitor()">Carregar e Filtrar</button>
     </div>
 
     <div id="chart-container">
         <canvas id="qualityChart"></canvas>
+        <p id="statusMessage" style="text-align:center; color: #cc0000; font-weight: bold;"></p>
     </div>
 
     <script src="script.js"></script>
