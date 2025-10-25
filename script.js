@@ -1,7 +1,10 @@
 const CSV_FILE = 'log_monitorng_MacOS_25-10-25.csv';
+let allData = []; // Variável global para armazenar todos os dados brutos do CSV
+let chartInstance = null; // Variável para armazenar a instância do gráfico
 
 // Função para mapear o status de texto para um valor numérico para o gráfico
 function mapScore(status) {
+    if (!status) return 0;
     switch (status.toLowerCase()) {
         case 'excelente':
             return 100; // Pontuação máxima
@@ -10,73 +13,53 @@ function mapScore(status) {
         case 'ruim':
             return 25;
         default:
-            return 0; // Desconhecido ou outro (opcional)
+            return 0; 
     }
 }
 
-// Função principal para carregar os dados e desenhar o gráfico
-function loadAndDrawChart() {
-    Papa.parse(CSV_FILE, {
-        download: true, // Permite carregar o arquivo do GitHub Pages
-        header: true,   // Trata a primeira linha como cabeçalhos
-        skipEmptyLines: true,
-        complete: function(results) {
-            console.log("Dados CSV carregados:", results.data);
-
-            const labels = [];
-            const dataScores = [];
-            const backgroundColors = [];
-
-            results.data.forEach(row => {
-                // Colunas de interesse: Timestamp e Connection_Health_Score
-                const timestamp = row.Timestamp;
-                const scoreStatus = row['Connection_Health_Status'];
-                
-                if (timestamp && scoreStatus) {
-                    const score = mapScore(scoreStatus);
-                    
-                    // Formata a hora para o eixo X
-                    const timeOnly = timestamp.split(' ')[1]; // Pega apenas a parte da hora (ex: 00:00:00)
-                    labels.push(timeOnly);
-                    
-                    // Adiciona o score numérico
-                    dataScores.push(score);
-
-                    // Adiciona cores para visualização (opcional, mas ajuda a destacar)
-                    if (score === 100) backgroundColors.push('rgba(75, 192, 192, 1)'); // Excelente (Verde)
-                    else if (score === 75) backgroundColors.push('rgba(255, 206, 86, 1)'); // Bom (Amarelo)
-                    else backgroundColors.push('rgba(255, 99, 132, 1)'); // Ruim (Vermelho)
-                }
-            });
-
-            // Chama a função para criar o gráfico com os dados processados
-            createChart(labels, dataScores, backgroundColors);
-        },
-        error: function(error) {
-            console.error("Erro ao carregar o CSV:", error);
-            alert("Erro ao carregar o arquivo CSV.");
-        }
-    });
-}
-
 // Função para criar e renderizar o gráfico Chart.js
-function createChart(labels, dataScores, backgroundColors) {
+function drawChart(dataToDisplay) {
+    // Se o gráfico já existe, destrua-o para redesenhar
+    if (chartInstance) {
+        chartInstance.destroy();
+    }
+
+    const labels = [];
+    const dataScores = [];
+    const backgroundColors = [];
+
+    dataToDisplay.forEach(row => {
+        const timestamp = row.Timestamp;
+        const scoreStatus = row['Connection_Health_Status'];
+        const score = mapScore(scoreStatus);
+        
+        // Pega apenas a hora (ex: 00:00:00)
+        const timeOnly = timestamp.split(' ')[1]; 
+        labels.push(timeOnly.substring(0, 5)); // Mostra apenas HH:MM
+        dataScores.push(score);
+
+        // Define cores para os pontos
+        if (score === 100) backgroundColors.push('#4BC0C0'); // Excelente (Teal)
+        else if (score === 75) backgroundColors.push('#FFCD56'); // Bom (Amarelo)
+        else backgroundColors.push('#FF6384'); // Ruim (Vermelho)
+    });
+
     const ctx = document.getElementById('qualityChart').getContext('2d');
 
-    new Chart(ctx, {
+    chartInstance = new Chart(ctx, { // Armazena a nova instância
         type: 'line', // Gráfico de linha para séries temporais
         data: {
             labels: labels, // Horários (eixo X)
             datasets: [{
                 label: 'Qualidade da Conexão (Score)',
                 data: dataScores, // Valores numéricos (eixo Y)
-                borderColor: 'rgba(54, 162, 235, 1)',
-                backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                tension: 0.1, // Suaviza a linha
+                borderColor: '#36A2EB', // Azul da linha
+                backgroundColor: 'rgba(54, 162, 235, 0.2)', // Preenchimento suave
+                tension: 0.3, // Suaviza a linha
                 pointBackgroundColor: backgroundColors, // Cor dos pontos conforme a pontuação
                 pointRadius: 5,
                 borderWidth: 2,
-                fill: false // Não preenche a área abaixo da linha
+                fill: false // Define como false para não preencher a área
             }]
         },
         options: {
@@ -86,38 +69,96 @@ function createChart(labels, dataScores, backgroundColors) {
                 x: {
                     title: {
                         display: true,
-                        text: 'Horário do Monitoramento'
-                    },
-                    // Filtro de tempo: para selecionar o intervalo (a ser implementado com botões/inputs)
-                    // Para o seu caso, ele mostrará todas as horas do arquivo
+                        text: 'Horário do Monitoramento (HH:MM)'
+                    }
                 },
                 y: {
                     title: {
                         display: true,
-                        text: 'Qualidade (Score: 0=Ruim, 100=Excelente)'
+                        text: 'Qualidade (Score)'
                     },
                     min: 0,
                     max: 100,
                     ticks: {
-                        // Rótulos personalizados para os scores
-                        callback: function(value, index, values) {
+                        stepSize: 25,
+                        // Rótulos personalizados
+                        callback: function(value) {
                             if (value === 100) return 'Excelente';
                             if (value === 75) return 'Bom';
                             if (value === 25) return 'Ruim';
-                            return value;
+                            if (value === 0) return 'Falha/Outro';
+                            return '';
                         }
                     }
                 }
             },
             plugins: {
-                legend: {
-                    display: true
-                },
                 title: {
                     display: true,
-                    text: 'Evolução do Score de Qualidade da Conexão'
+                    text: 'Evolução do Score de Qualidade da Conexão no Intervalo'
                 }
             }
+        }
+    });
+}
+
+// Função para filtrar os dados e redesenhar o gráfico
+function filterChart() {
+    const startTimeStr = document.getElementById('startTime').value; // Ex: 00:00
+    const endTimeStr = document.getElementById('endTime').value;     // Ex: 23:59
+
+    if (!allData || allData.length === 0) {
+        alert("Dados não carregados. Aguarde ou verifique o arquivo CSV.");
+        return;
+    }
+
+    // Filtra os dados com base na hora (assumindo que o CSV tem a data no formato 'YYYY-MM-DD HH:MM:SS')
+    const filteredData = allData.filter(row => {
+        const timestamp = row.Timestamp;
+        if (!timestamp) return false;
+        
+        // Pega a parte da hora, assumindo que está no formato HH:MM:SS
+        const timeOnly = timestamp.split(' ')[1]; 
+
+        // Compara as strings de tempo, garantindo que a comparação inclua os segundos
+        // Adicionamos ':00' ao filtro de hora para ter uma string comparável (HH:MM:SS)
+        const filterStart = startTimeStr + ':00';
+        const filterEnd = endTimeStr + ':59'; // Pega até o último segundo do minuto final
+
+        return timeOnly >= filterStart && timeOnly <= filterEnd;
+    });
+
+    if (filteredData.length === 0) {
+        alert("Nenhum dado encontrado no intervalo selecionado. Tente expandir o filtro.");
+    }
+    
+    // Redesenha o gráfico com os dados filtrados
+    drawChart(filteredData);
+}
+
+
+// Função principal para carregar o CSV
+function loadAndDrawChart() {
+    Papa.parse(CSV_FILE, {
+        download: true, 
+        header: true,   
+        skipEmptyLines: true,
+        complete: function(results) {
+            // Filtra e armazena apenas as linhas que são válidas
+            allData = results.data.filter(row => row.Timestamp && row['Connection_Health_Status']); 
+
+            if (allData.length === 0) {
+                console.error("Nenhuma linha de dados válida encontrada no CSV.");
+                document.getElementById('chart-container').innerHTML = "<p style='text-align:center;'>Erro: Nenhuma linha de dados válida encontrada.</p>";
+                return;
+            }
+            
+            // Desenha o gráfico inicial com todos os dados
+            drawChart(allData); 
+        },
+        error: function(error) {
+            console.error("Erro ao carregar o CSV:", error);
+            document.getElementById('chart-container').innerHTML = "<p style='text-align:center;'>Erro ao carregar o arquivo CSV. Verifique o console para detalhes.</p>";
         }
     });
 }
