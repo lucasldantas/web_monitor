@@ -26,13 +26,21 @@
             padding: 15px;
             background-color: #fff;
             border-bottom: 1px solid #ddd;
+            /* Flexbox para melhor alinhamento em diferentes tamanhos de tela */
+            display: flex; 
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px; /* Espaço entre os elementos */
         }
         #controls label, #controls button, #controls select, #controls input {
-            margin: 0 5px;
+            margin: 0; /* Remove margem desnecessária criada anteriormente */
             font-size: 1em;
             padding: 5px;
             border-radius: 4px;
             border: 1px solid #ccc;
+        }
+        #controls input[type="text"] {
+            min-width: 150px; /* Garante que o campo hostname seja visível */
         }
         #controls button {
             background-color: #4CAF50;
@@ -53,7 +61,6 @@
             border-radius: 8px;
             max-height: 500px;
         }
-        /* Para garantir que o canvas se estique corretamente */
         #qualityChart {
             max-height: 460px;
         }
@@ -73,13 +80,14 @@
         <label for="dateSelect">Data do Log:</label>
         <input type="text" id="dateSelect" pattern="\d{2}-\d{2}-\d{2}" placeholder="DD-MM-YY">
         
-        <label for="startTime" style="margin-left: 15px;">Início (HH:MM):</label>
-        <input type="time" id="startTime" value="00:00">
+        <label for="hostnameFilter">Hostname:</label>
+        <input type="text" id="hostnameFilter" placeholder="Ex: ARCO-CD28F..." oninput="filterChart()"> <label for="startTime">Início (HH:MM):</label>
+        <input type="time" id="startTime" value="00:00" onchange="filterChart()">
         
-        <label for="endTime" style="margin-left: 15px;">Fim (HH:MM):</label>
-        <input type="time" id="endTime" value="23:59">
+        <label for="endTime">Fim (HH:MM):</label>
+        <input type="time" id="endTime" value="23:59" onchange="filterChart()">
         
-        <button onclick="initMonitor()">Carregar e Filtrar</button>
+        <button onclick="initMonitor()">Carregar Novo Log</button>
     </div>
 
     <div id="chart-container">
