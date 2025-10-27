@@ -19,12 +19,11 @@ function getCurrentDateFormatted() {
 
 function mapScore(status) {
     if (!status) return 0;
-    // Adicionado 'Aceitável' para mapear um valor intermediário (75)
-    if (status.toLowerCase() === 'aceitável') return 75; 
 
     switch (status.toLowerCase()) {
         case 'excelente': return 100;
-        case 'bom': return 75;
+        case 'bom':
+        case 'aceitável': return 75; // Trata 'aceitável' e 'bom' como 75
         case 'ruim': return 25;
         default: return 0; 
     }
@@ -60,18 +59,32 @@ function addHostname() {
     const select = document.getElementById('hostnameSelect');
     const hostname = input.value.trim();
 
-    if (hostname && allHostnames.has(hostname) && !Array.from(select.options).some(opt => opt.value === hostname)) {
-        // Remove a opção "Todos" se for a única selecionada
+    // Verifica se o hostname é válido e ainda não está na seleção
+    if (hostname && allHostnames.has(hostname)) {
+        
+        // Verifica se já está selecionado
+        if (Array.from(select.options).some(opt => opt.value === hostname && opt.selected)) {
+            alert(`O Hostname '${hostname}' já está na sua seleção.`);
+            input.value = '';
+            return;
+        }
+
+        // Remove a opção "Todos" (valor "") se for a única selecionada, e adiciona o novo host
         const allOption = select.querySelector('option[value=""]');
         if (allOption && allOption.selected) {
             allOption.selected = false;
         }
 
-        const option = document.createElement('option');
-        option.value = hostname;
-        option.textContent = hostname;
-        option.selected = true; // Seleciona o host adicionado
-        select.appendChild(option);
+        // Tenta encontrar a opção existente ou cria uma nova
+        let option = select.querySelector(`option[value="${hostname}"]`);
+        if (!option) {
+             option = document.createElement('option');
+             option.value = hostname;
+             option.textContent = hostname;
+             select.appendChild(option);
+        }
+        
+        option.selected = true; // Seleciona o host
         
         input.value = ''; // Limpa o campo de input
         filterChart();
@@ -98,16 +111,15 @@ function clearHostnameSelection() {
 // Obtém os hostnames selecionados, excluindo a opção "Todos"
 function getSelectedHostnames() {
     const select = document.getElementById('hostnameSelect');
-    const selectedHostnames = Array.from(select.selectedOptions)
-                                 .map(option => option.value)
-                                 .filter(value => value !== ''); // Remove a opção "Todos"
+    const selectedOptions = Array.from(select.selectedOptions);
     
-    // Se a opção "Todos" foi deixada como a única selecionada, retorna vazio para indicar Média
-    if (selectedHostnames.length === 0 && Array.from(select.selectedOptions).some(opt => opt.value === '')) {
-         return [];
+    // Se a única seleção for "Todos (Média)", retorna array vazio para indicar modo Média
+    if (selectedOptions.length === 1 && selectedOptions[0].value === '') {
+        return [];
     }
 
-    return selectedHostnames;
+    // Retorna apenas os hostnames válidos (excluindo a opção "Todos")
+    return selectedOptions.map(option => option.value).filter(value => value !== '');
 }
 
 
@@ -125,7 +137,6 @@ function displayEventDetails(row) {
     document.getElementById('event-details').style.display = 'block';
 }
 
-// A função de clique só funciona com um único host selecionado (ou média geral sem clique)
 function handleChartClick(event) {
     const points = chartInstance.getElementsAtEventForMode(event, 'index', { intersect: true }, false);
     if (points.length === 0) {
@@ -141,7 +152,7 @@ function handleChartClick(event) {
     if (isSingleHost) {
         const timeLabel = chartInstance.data.labels[dataIndex];
         
-        // Encontra o registro bruto mais próximo (apenas o primeiro se houver vários no mesmo minuto)
+        // Encontra o registro bruto mais próximo
         const clickedRow = currentDataToDisplay.find(row => 
             row.Timestamp && 
             row.Timestamp.split(' ')[1].substring(0, 5) === timeLabel && 
@@ -175,7 +186,6 @@ function getDistinctColor(index, isDark) {
     return colors[index % colors.length];
 }
 
-// NOVO: A função agora aceita os hosts selecionados e gera múltiplos datasets
 function drawChart(dataToDisplay, selectedHostnames) {
     const statusElement = document.getElementById('statusMessage');
     if (chartInstance) {
@@ -194,8 +204,8 @@ function drawChart(dataToDisplay, selectedHostnames) {
     const isDark = document.body.classList.contains('dark-mode');
     const color = isDark ? '#f0f0f0' : '#333';
     const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-    const latencyColor = isDark ? '#FF6384' : '#E84A5F';
-
+    const latencyColor = isDark ? '#FF6384' : '#E84A5F'; // Cor padrão para Latência
+    
     let maxLatency = 0;
     
     // --- Lógica de Geração de Datasets ---
@@ -219,7 +229,6 @@ function drawChart(dataToDisplay, selectedHostnames) {
         const isAverage = hostname === '__AVERAGE__';
         const labelBase = isAverage ? 'Média Geral' : hostname;
         
-        // No modo Média, filtramos APENAS o tempo, o hostname é ignorado para o cálculo da média
         const hostData = isAverage ? dataToDisplay : dataToDisplay.filter(row => row.Hostname === hostname);
         
         // Cores e estilos
@@ -235,17 +244,20 @@ function drawChart(dataToDisplay, selectedHostnames) {
             const currentPeriodData = hostData.filter(row => row.Timestamp.split(' ')[1].substring(0, 5) === timeLabel);
             
             if (currentPeriodData.length > 0) {
-                const scores = currentPeriodData.map(row => mapScore(row['Connection_Health_Status']));
-                const latencies = currentPeriodData.map(row => parseFloat(row['TCP_Latency_ms']) || 0);
+                
+                const scores = currentPeriodData.map(row => mapScore(row['Connection_Health_Status']))
+                                                .filter(s => s !== null);
+                const latencies = currentPeriodData.map(row => parseFloat(row['TCP_Latency_ms']))
+                                                    .filter(l => !isNaN(l)); // Filtra valores não-numéricos (NaN)
                 
                 // Média para o score e latência
-                const score = scores.reduce((a, b) => a + b, 0) / scores.length;
-                const latency = latencies.reduce((a, b) => a + b, 0) / latencies.length; 
+                const score = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
+                const latency = latencies.length > 0 ? latencies.reduce((a, b) => a + b, 0) / latencies.length : null; 
                 
                 dataScores.push(score);
                 dataLatency.push(latency);
                 
-                if (latency > maxLatency) maxLatency = latency;
+                if (latency !== null && latency > maxLatency) maxLatency = latency;
                 
             } else {
                 dataScores.push(null); // Sem dados neste período
@@ -265,7 +277,7 @@ function drawChart(dataToDisplay, selectedHostnames) {
             pointRadius: pointRadius,
             borderWidth: lineWeight,
             fill: false,
-            order: 1 // Desenha primeiro
+            order: 1 
         });
         
         // Adicionar dataset de Latência
@@ -273,15 +285,15 @@ function drawChart(dataToDisplay, selectedHostnames) {
             label: `${labelBase} (Latência)`,
             data: dataLatency,
             yAxisID: 'y-latency', 
-            // Usa a cor padrão de latência para a linha se for a média, ou a cor do host para diferenciá-lo
+            // CORREÇÃO: Usa a cor padrão de latência para a linha se for a média
             borderColor: isAverage ? latencyColor : scoreColor,
             backgroundColor: isAverage ? 'rgba(255, 99, 132, 0.1)' : `${scoreColor}33`,
             tension: 0.3,
             pointRadius: pointRadius,
             borderWidth: lineWeight,
             fill: false,
-            // Oculta a linha de latência por padrão em modo multi-host, mas mostra no modo média
-            hidden: !isAverageMode, 
+            // CORREÇÃO: No modo Média, a Latência DEVE ser visível.
+            hidden: !isAverage, 
             order: 2
         });
     });
@@ -289,6 +301,11 @@ function drawChart(dataToDisplay, selectedHostnames) {
 
     // Escala máxima para o eixo Y de Latência (arredondado para o próximo múltiplo de 500)
     const latencyMaxScale = Math.ceil((maxLatency + 100) / 500) * 500; 
+    
+    // Se a latência for 0, garante que o max seja um valor razoável (ex: 500)
+    if (latencyMaxScale === 0) {
+        latencyMaxScale = 500;
+    }
 
     const ctx = document.getElementById('qualityChart').getContext('2d');
     chartInstance = new Chart(ctx, { 
@@ -305,8 +322,8 @@ function drawChart(dataToDisplay, selectedHostnames) {
                 mode: 'index',
                 intersect: false,
             },
-            // Desativa o clique em modo multi-host para evitar ambiguidade nos detalhes do evento
-            onClick: processingHostnames.length === 1 && !isAverageMode ? handleChartClick : null, 
+            // Desativa o clique em modo multi-host ou média
+            onClick: selectedHostnames.length === 1 ? handleChartClick : null, 
             scales: {
                 x: {
                     title: { display: true, text: 'Horário do Monitoramento (HH:MM)', color: color },
@@ -364,11 +381,11 @@ function filterChart() {
     
     if (!allData || allData.length === 0) {
         currentDataToDisplay = [];
+        // Chamar drawChart() aqui garante que o statusMessage seja atualizado se necessário.
+        drawChart([], selectedHostnames);
         return;
     }
 
-    // A filtragem principal agora é sempre pelo tempo. A filtragem por Hostname é feita em `drawChart` 
-    // ou aqui, dependendo do modo, para otimizar.
     let dataForDisplay;
     
     if (isFilteringByHost) {
@@ -420,7 +437,8 @@ function initMonitor() {
     allData = []; 
 
     document.getElementById('hostnameInput').value = ""; // Limpa o input de autocomplete
-    clearHostnameSelection(); // Reseta a seleção
+    // Não chama clearHostnameSelection() aqui para manter a seleção de hostnames após a atualização
+    // clearHostnameSelection(); 
     document.getElementById('event-details').style.display = 'none';
 
     Papa.parse(fileName, {
@@ -434,7 +452,24 @@ function initMonitor() {
             // NOVO: Extrair hostnames únicos e preencher o datalist
             allHostnames = new Set(allData.map(row => row.Hostname).filter(h => h && h.trim() !== ''));
             populateHostnameDatalist(); 
-            // clearHostnameSelection já foi chamada acima para resetar o select.
+            
+            // Verifica se a opção "Todos (Média)" existe e a adiciona/mantém se a lista estiver vazia
+            const select = document.getElementById('hostnameSelect');
+            if (!select.querySelector('option[value=""]')) {
+                const allOption = document.createElement('option');
+                allOption.value = '';
+                allOption.textContent = 'Todos (Média)';
+                select.prepend(allOption);
+                allOption.selected = true; // Seleciona por padrão
+            }
+
+            // Remove hostnames que não existem mais no arquivo CSV
+            Array.from(select.options).forEach(option => {
+                if (option.value !== '' && !allHostnames.has(option.value)) {
+                    option.remove();
+                }
+            });
+
 
             if (allData.length === 0) {
                 statusElement.textContent = `Erro: Nenhuma linha de dados válida em ${fileName}.`;
@@ -483,6 +518,10 @@ function init() {
         document.getElementById('darkModeToggle').checked = true;
     }
     
+    // Adiciona o listener para o botão de toggle
+    const checkbox = document.getElementById('darkModeToggle');
+    checkbox.addEventListener('change', toggleDarkMode);
+
     // Inicia o monitoramento (carrega o log do dia)
     initMonitor(); 
 }
