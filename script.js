@@ -1,6 +1,6 @@
 let allData = [];
 let chartInstance = null;
-let currentDataToDisplay = []; // Dados atualmente visíveis no gráfico
+let currentDataToDisplay = []; 
 const AUTO_UPDATE_INTERVAL = 10 * 60 * 1000; // 10 minutos em milissegundos
 let autoUpdateTimer = null; 
 
@@ -18,6 +18,9 @@ function getCurrentDateFormatted() {
 
 function mapScore(status) {
     if (!status) return 0;
+    // Adicionado 'Aceitável' para mapear um valor intermediário (75)
+    if (status.toLowerCase() === 'aceitável') return 75; 
+
     switch (status.toLowerCase()) {
         case 'excelente': return 100;
         case 'bom': return 75;
@@ -29,7 +32,6 @@ function mapScore(status) {
 function getFileName() {
     const os = document.getElementById('osSelect').value;
     const date = document.getElementById('dateSelect').value;
-    // Padrão do nome do seu arquivo: log_meet_monitoring_OS_DD-MM-YY.csv
     return `log_meet_monitoring_${os}_${date}.csv`;
 }
 
@@ -82,15 +84,15 @@ window.onload = function() {
 }
 
 // --------------------------------------------------------------------------
-// Lógica de Detalhe de Evento (NOVA)
+// Lógica de Detalhe de Evento (CORRIGIDA)
 // --------------------------------------------------------------------------
 
 function displayEventDetails(dataRow) {
     const detailsContainer = document.getElementById('event-details');
     const content = document.getElementById('event-content');
 
-    // Mapeamento dos campos que queremos exibir para troubleshooting
-    const troubleshootingFields = [
+    // Campos principais
+    const primaryFields = [
         { label: "Timestamp", key: "Timestamp" },
         { label: "Hostname", key: "Hostname" },
         { label: "Usuário Logado", key: "UserLogged" },
@@ -98,17 +100,44 @@ function displayEventDetails(dataRow) {
         { label: "Provedor", key: "Provedor" },
         { label: "Latência TCP (ms)", key: "TCP_Latency_ms" },
         { label: "Status da Conexão", key: "Connection_Health_Status" },
-        { label: "Hop 1 Latência", key: "Hop 1 Latency ms" },
-        { label: "Hop 2 Latência", key: "Hop 2 Latency ms" },
-        { label: "Hop 3 Latência", key: "Hop 3 Latency ms" },
-        { label: "Hop 4 Latência", key: "Hop 4 Latency ms" }
     ];
 
     let html = '';
-    troubleshootingFields.forEach(field => {
+    
+    // 1. Adiciona campos principais
+    primaryFields.forEach(field => {
         const value = dataRow[field.key] || 'N/A';
         html += `<p><strong>${field.label}:</strong> ${value}</p>`;
     });
+
+    // 2. Adiciona Hops Dinamicamente
+    html += `<h4 style="margin-top: 15px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Detalhes do Rastreamento (Hops)</h4>`;
+
+    let foundHops = false;
+    for (let i = 1; i <= 30; i++) { // Verifica até o Hop 30 (ajuste se necessário)
+        const ipKey = `Hop_${i}_IP`;
+        const latencyKey = `Hop_${i}_Latency_ms`;
+
+        const ip = dataRow[ipKey];
+        const latency = dataRow[latencyKey];
+        
+        // Verifica se o Hop tem IP ou Latência e não é um valor vazio do CSV
+        if (ip || latency) {
+            const ipValue = ip && ip.trim() !== '' ? ip : 'N/A';
+            const latencyValue = latency && latency.trim() !== '' ? `${latency} ms` : 'N/A';
+            
+            // Só exibe se pelo menos um dos valores for relevante
+            if (ipValue !== 'N/A' || latencyValue !== 'N/A') {
+                html += `<p style="margin-top: 5px; margin-bottom: 5px;"><strong>Hop ${i}:</strong> ${ipValue} (${latencyValue})</p>`;
+                foundHops = true;
+            }
+        }
+    }
+    
+    // Se nenhum Hop foi encontrado (além da mensagem do H4), adiciona uma nota
+    if (!foundHops) {
+        html += `<p style="color: #999;">Nenhum dado detalhado de rastreamento de rota encontrado neste registro.</p>`;
+    }
 
     content.innerHTML = html;
     detailsContainer.style.display = 'block';
@@ -136,10 +165,8 @@ function handleChartClick(event) {
 
 function updateChartTheme(isDark) {
     if (chartInstance) {
-        // Força a recriação do gráfico para aplicar as cores do tema corretamente
-        // (método mais confiável do que apenas usar chartInstance.update())
         const dataToRedraw = currentDataToDisplay;
-        currentDataToDisplay = []; // Limpa para evitar loops
+        currentDataToDisplay = [];
         drawChart(dataToRedraw); 
     }
 }
@@ -236,7 +263,7 @@ function drawChart(dataToDisplay) {
                 mode: 'index',
                 intersect: false,
             },
-            onClick: handleChartClick, // Manipulador de clique
+            onClick: handleChartClick,
             scales: {
                 x: {
                     title: { display: true, text: 'Horário do Monitoramento (HH:MM)', color: color },
