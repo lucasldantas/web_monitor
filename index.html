@@ -3,10 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🖥️ Monitor de conexão com o Google Meet 📊</title>
+    <title>Monitor de Conexão com o Google Meet 💻</title>
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     
     <style>
         /* ------------------------------------------------------------------
@@ -60,7 +64,7 @@
             display: none;
             transition: background-color 0.3s, border-color 0.3s;
         }
-        #event-details h3 {
+        #event-details h3, #event-details h4 {
             margin-top: 0; 
             border-bottom: 1px solid #eee; 
             padding-bottom: 5px;
@@ -69,7 +73,7 @@
         
         /* Estilização de inputs, select e button */
         #controls button, 
-        #controls select, 
+        #controls select:not(#hostnameFilter), /* Exclui o select do Hostname para que o Select2 cuide dele */
         #controls input[type="text"],
         #controls input[type="time"] { 
             font-size: 1em;
@@ -90,6 +94,14 @@
             background: none;
         }
         
+        /* Estilização específica do Select2 no tema claro */
+        .select2-container--default .select2-selection--multiple {
+            border: 1px solid #ccc !important;
+            min-height: 35px;
+            max-width: 250px;
+            background-color: #fff !important;
+        }
+
         #controls input[type="text"] { min-width: 150px; }
         #controls button {
             background-color: #4CAF50;
@@ -147,7 +159,7 @@
             border: 1px solid #333;
             box-shadow: 0 1px 3px rgba(0,0,0,0.5);
         }
-        body.dark-mode #event-details h3 {
+        body.dark-mode #event-details h3, body.dark-mode #event-details h4 {
             color: #f0f0f0;
             border-bottom: 1px solid #555;
         }
@@ -158,7 +170,23 @@
             color: #f0f0f0;
         }
 
-
+        /* Estilização específica do Select2 no tema escuro */
+        body.dark-mode .select2-container--default .select2-selection--multiple {
+            background-color: #333 !important;
+            color: #f0f0f0 !important;
+            border: 1px solid #555 !important;
+        }
+        body.dark-mode .select2-container--default .select2-selection--choice {
+            background-color: #4a4a4a !important;
+            border: 1px solid #666 !important;
+            color: #f0f0f0 !important;
+        }
+        body.dark-mode .select2-container--default .select2-selection--choice__remove {
+            color: #ccc !important;
+        }
+        body.dark-mode .select2-container--default .select2-search--inline .select2-search__field {
+            color: #f0f0f0 !important;
+        }
         /* ------------------------------------------------------------------
            SWITCH TEMA (Botão Deslizante)
            ------------------------------------------------------------------ */
@@ -169,7 +197,7 @@
             top: 10px;
             right: 10px;
             font-size: 0.9em;
-            color: inherit; /* Garante que o texto se adapte ao tema */
+            color: inherit;
         }
         .theme-switch {
             display: inline-block;
@@ -222,7 +250,7 @@
         </label>
     </div>
 
-    <h1>🖥️ Monitor de conexão com o Google Meet 📊</h1>
+    <h1>Monitor de Conexão com o Google Meet 💻</h1>
 
     <div id="controls">
         <label for="osSelect">Sistema Operacional:</label>
@@ -234,8 +262,9 @@
         <label for="dateSelect">Data do Log:</label>
         <input type="text" id="dateSelect" pattern="\d{2}-\d{2}-\d{2}" placeholder="DD-MM-YY">
         
-        <label for="hostnameFilter">Hostname:</label>
-        <input type="text" id="hostnameFilter" placeholder="Ex: ARCO-CD28F..." oninput="filterChart()">
+        <label for="hostnameFilter">Hostname(s):</label>
+        <select id="hostnameFilter" multiple="multiple" style="width: 200px;">
+            </select>
         
         <label for="startTime">Início (HH:MM):</label>
         <input type="time" id="startTime" value="00:00" onchange="filterChart()">
