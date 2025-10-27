@@ -1,8 +1,8 @@
-let allData = [];
+[cite: 1] let allData = [];
 let chartInstance = null;
 let currentDataToDisplay = []; 
 const AUTO_UPDATE_INTERVAL = 10 * 60 * 1000;
-// 10 minutos em milissegundos
+[cite: 2] // 10 minutos em milissegundos
 let autoUpdateTimer = null; 
 
 // --------------------------------------------------------------------------
@@ -11,27 +11,27 @@ let autoUpdateTimer = null;
 
 function getCurrentDateFormatted() {
     const today = new Date();
-const dd = String(today.getDate()).padStart(2, '0');
+[cite: 3] const dd = String(today.getDate()).padStart(2, '0');
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const yy = String(today.getFullYear()).slice(-2);
     return `${dd}-${mm}-${yy}`;
-}
+[cite: 4] }
 
 function mapScore(status) {
     if (!status) return 0;
-// Adicionado 'Aceitável' para mapear um valor intermediário (75)
+[cite: 5] // Adicionado 'Aceitável' para mapear um valor intermediário (75)
     if (status.toLowerCase() === 'aceitável') return 75;
-switch (status.toLowerCase()) {
+[cite: 6] switch (status.toLowerCase()) {
         case 'excelente': return 100;
         case 'bom': return 75;
-case 'ruim': return 25;
+[cite: 7] case 'ruim': return 25;
         default: return 0; 
     }
 }
 
 function getFileName() {
     const os = document.getElementById('osSelect').value;
-const date = document.getElementById('dateSelect').value;
+[cite: 8] const date = document.getElementById('dateSelect').value;
     return `log_meet_monitoring_${os}_${date}.csv`;
 }
 
@@ -41,39 +41,39 @@ const date = document.getElementById('dateSelect').value;
 
 function toggleDarkMode() {
     const isDark = document.body.classList.toggle('dark-mode');
-localStorage.setItem('darkMode', isDark);
+[cite: 9] localStorage.setItem('darkMode', isDark);
     updateChartTheme(isDark);
 }
 
 function applySavedTheme() {
     const savedTheme = localStorage.getItem('darkMode');
     const checkbox = document.getElementById('checkbox');
-if (savedTheme === 'true') {
+[cite: 10] if (savedTheme === 'true') {
         document.body.classList.add('dark-mode');
         checkbox.checked = true;
-}
+[cite: 11] }
     
     checkbox.addEventListener('change', toggleDarkMode);
     updateChartTheme(savedTheme === 'true');
-}
+[cite: 12] }
 
 function startAutoUpdate() {
     if (autoUpdateTimer) {
         clearInterval(autoUpdateTimer);
-}
+[cite: 13] }
     
     autoUpdateTimer = setInterval(() => {
         const timestamp = new Date().toLocaleTimeString();
         console.log(`Autoatualizando dados em ${timestamp}...`);
         initMonitor();
     }, AUTO_UPDATE_INTERVAL);
-console.log(`Autoatualização configurada para cada ${AUTO_UPDATE_INTERVAL / 60000} minutos.`);
+[cite: 14] console.log(`Autoatualização configurada para cada ${AUTO_UPDATE_INTERVAL / 60000} minutos.`);
 }
 
 window.onload = function() {
     applySavedTheme();
     document.getElementById('dateSelect').value = getCurrentDateFormatted();
-document.getElementById('osSelect').addEventListener('change', initMonitor);
+[cite: 15] document.getElementById('osSelect').addEventListener('change', initMonitor);
     document.getElementById('dateSelect').addEventListener('change', initMonitor);
 
     initMonitor(); 
@@ -86,7 +86,7 @@ document.getElementById('osSelect').addEventListener('change', initMonitor);
 
 function displayEventDetails(dataRow) {
     const detailsContainer = document.getElementById('event-details');
-const content = document.getElementById('event-content');
+[cite: 16] const content = document.getElementById('event-content');
 
     // Campos principais
     const primaryFields = [
@@ -97,33 +97,33 @@ const content = document.getElementById('event-content');
         { label: "Provedor", key: "Provedor" },
         { label: "Latência TCP (ms)", key: "TCP_Latency_ms" },
      
-   { label: "Status da Conexão", key: "Connection_Health_Status" },
+[cite: 17]    { label: "Status da Conexão", key: "Connection_Health_Status" },
     ];
 
     let html = '';
-// 1. Adiciona campos principais
+[cite: 18] // 1. Adiciona campos principais
     primaryFields.forEach(field => {
         const value = dataRow[field.key] || 'N/A';
         html += `<p><strong>${field.label}:</strong> ${value}</p>`;
     });
-// 2. Adiciona Hops Dinamicamente
+[cite: 19] // 2. Adiciona Hops Dinamicamente
     html += `<h4 style="margin-top: 15px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Detalhes do Rastreamento (Hops)</h4>`;
-let foundHops = false;
+[cite: 20] let foundHops = false;
     for (let i = 1; i <= 30; i++) { // Verifica até o Hop 30 (ajuste se necessário)
         const ipKey = `Hop_${i}_IP`;
-const latencyKey = `Hop_${i}_Latency_ms`;
+[cite: 21] const latencyKey = `Hop_${i}_Latency_ms`;
 
         const ip = dataRow[ipKey];
         const latency = dataRow[latencyKey];
-// Verifica se o Hop tem IP ou Latência e não é um valor vazio do CSV
+[cite: 22] // Verifica se o Hop tem IP ou Latência e não é um valor vazio do CSV
         if (ip || latency) {
             const ipValue = ip && ip.trim() !== '' ?
-ip : 'N/A';
+[cite: 23] ip : 'N/A';
             const latencyValue = latency && latency.trim() !== '' ? `${latency} ms` : 'N/A';
-// Só exibe se pelo menos um dos valores for relevante
+[cite: 24] // Só exibe se pelo menos um dos valores for relevante
             if (ipValue !== 'N/A' || latencyValue !== 'N/A') {
                 html += `<p style="margin-top: 5px; margin-bottom: 5px;"><strong>Hop ${i}:</strong> ${ipValue} (${latencyValue})</p>`;
-foundHops = true;
+[cite: 25] foundHops = true;
             }
         }
     }
@@ -131,24 +131,24 @@ foundHops = true;
     // Se nenhum Hop foi encontrado (além da mensagem do H4), adiciona uma nota
     if (!foundHops) {
         html += `<p style="color: #999;">Nenhum dado detalhado de rastreamento de rota encontrado neste registro.</p>`;
-}
+[cite: 26] }
 
     content.innerHTML = html;
     detailsContainer.style.display = 'block';
-}
+[cite: 27] }
 
 function handleChartClick(event) {
     const points = chartInstance.getElementsAtEventForMode(event, 'index', { intersect: true }, false);
-if (points.length === 0) {
+[cite: 28] if (points.length === 0) {
         document.getElementById('event-details').style.display = 'none';
         return;
-}
+[cite: 29] }
 
     const dataIndex = points[0].index;
     const clickedRow = currentDataToDisplay[dataIndex];
-if (clickedRow) {
+[cite: 30] if (clickedRow) {
         displayEventDetails(clickedRow);
-}
+[cite: 31] }
 }
 
 // --------------------------------------------------------------------------
@@ -158,7 +158,7 @@ if (clickedRow) {
 function updateChartTheme(isDark) {
     if (chartInstance) {
         const dataToRedraw = currentDataToDisplay;
-currentDataToDisplay = [];
+[cite: 32] currentDataToDisplay = [];
         drawChart(dataToRedraw); 
     }
 }
@@ -180,14 +180,14 @@ function getHostnameColor(hostname) {
 
 function drawChart(dataToDisplay) {
     const statusElement = document.getElementById('statusMessage');
-if (chartInstance) {
+[cite: 33] if (chartInstance) {
         chartInstance.destroy();
-}
+[cite: 34] }
     
     currentDataToDisplay = dataToDisplay;
-if (dataToDisplay.length === 0) {
+[cite: 35] if (dataToDisplay.length === 0) {
         statusElement.textContent = "Nenhum dado encontrado no intervalo ou Hostname selecionado.";
-document.getElementById('event-details').style.display = 'none';
+[cite: 36] document.getElementById('event-details').style.display = 'none';
         return;
     }
 
@@ -202,52 +202,14 @@ document.getElementById('event-details').style.display = 'none';
     
     const isDark = document.body.classList.contains('dark-mode');
     const color = isDark ? '#f0f0f0' : '#333';
-const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+[cite: 38] const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
     const latencyColor = isDark ?
-'#FF6384' : '#E84A5F';
+[cite: 39] '#FF6384' : '#E84A5F';
 
     let maxLatency = 0;
+    const dataLatency = []; // Inicializa dataLatency aqui
 
-    // 1. Criar o Dataset de Qualidade (Score) para cada Hostname
-    uniqueHostnames.forEach((hostname, index) => {
-        const hostnameData = dataToDisplay.filter(row => row.Hostname === hostname);
-        const dataScores = [];
-        const scorePointColors = [];
-
-        hostnameData.forEach(row => {
-            const scoreStatus = row['Connection_Health_Status'];
-            const score = mapScore(scoreStatus);
-            dataScores.push(score);
-
-            if (score === 100) scorePointColors.push('#4BC0C0');
-            else if (score === 75) scorePointColors.push('#FFCD56');
-            else scorePointColors.push('#FF6384'); 
-        });
-
-        // Cor para a linha do Score, baseada no Hostname
-        const hostnameColor = getHostnameColor(hostname);
-        const borderColor = index === 0 ? (isDark ? '#A0D8FF' : '#36A2EB') : hostnameColor;
-        const backgroundColor = index === 0 ? (isDark ? 'rgba(160, 216, 255, 0.2)' : 'rgba(54, 162, 235, 0.2)') : hostnameColor + '30'; // Cor com transparência
-
-        datasets.push({
-            label: `Qualidade (Score) - ${hostname}`,
-            data: dataScores,
-        yAxisID: 'y-score', 
-            borderColor: borderColor,
-            backgroundColor: backgroundColor,
-       pointBackgroundColor: scorePointColors,
-            tension: 0.3, 
-            pointRadius: 5,
-            borderWidth: 2,
-            fill: false,
-             order: 1 // Garante que a linha de score esteja acima
-        });
-    });
-    
-    // 2. Criar o Dataset de Latência (Agregado - Usaremos o primeiro Hostname ou todos se for a comparação)
-    // Para simplificar a comparação de latência, se houver múltiplos hostnames, vamos traçar a latência MÁXIMA entre eles para cada ponto no tempo (Timestamp).
-    
-    // Primeiro, criar a lista de labels (Timestamp)
+    // Primeiro, criar a lista de labels (Timestamp) e calcular a Latência Máxima por Timestamp
     const allTimestamps = [...new Set(dataToDisplay.map(row => row.Timestamp))].sort();
     
     allTimestamps.forEach(timestamp => {
@@ -258,52 +220,85 @@ const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
             .filter(row => row.Timestamp === timestamp)
             .map(row => parseFloat(row['TCP_Latency_ms']) || 0);
 
-        // Se houver mais de um hostname, Latência deve ser a média ou máxima no timestamp
+        // Latência deve ser a MÁXIMA entre todos os Hostnames para aquele Timestamp.
         const latency = latencyValues.length > 0 ? Math.max(...latencyValues) : 0; 
         
         dataLatency.push(latency); 
         if (latency > maxLatency) maxLatency = latency;
     });
 
-    // Se houver múltiplos hostnames, o 'dataToDisplay' já está em ordem de Hostname, mas para garantir a correspondência de Latência com o Score
-    // e simplificar, vamos traçar apenas a latência MÁXIMA ou a latência do primeiro Hostname se for só um.
-    const dataLatency = []; 
-    // Como labels são baseados em Timestamp, a Latência deve ser a MÁXIMA de todos os Hostnames para aquele Timestamp.
-    allTimestamps.forEach(timestamp => {
-        const latencyValues = dataToDisplay
-            .filter(row => row.Timestamp === timestamp)
-            .map(row => parseFloat(row['TCP_Latency_ms']) || 0);
+
+    // 1. Criar o Dataset de Qualidade (Score) para cada Hostname
+    uniqueHostnames.forEach((hostname, index) => {
+        const hostnameData = dataToDisplay.filter(row => row.Hostname === hostname);
+        const dataScores = [];
+        const scorePointColors = [];
+
+        // Mapeia os scores para a lista de labels (timestamps)
+        allTimestamps.forEach(timestamp => {
+            const row = hostnameData.find(r => r.Timestamp === timestamp);
+            if (row) {
+                const scoreStatus = row['Connection_Health_Status'];
+                const score = mapScore(scoreStatus);
+                dataScores.push(score);
+
+                if (score === 100) scorePointColors.push('#4BC0C0');
+                else if (score === 75) scorePointColors.push('#FFCD56');
+                else scorePointColors.push('#FF6384');
+            } else {
+                // Se o Hostname não tiver dado para este timestamp, preenche com null para quebrar a linha
+                dataScores.push(null);
+                scorePointColors.push('transparent');
+            }
+        });
         
-        const latency = latencyValues.length > 0 ? Math.max(...latencyValues) : 0; 
-        dataLatency.push(latency);
-        if (latency > maxLatency) maxLatency = latency;
+        // Cor para a linha do Score, baseada no Hostname
+        const hostnameColor = getHostnameColor(hostname);
+        const borderColor = hostnameColor;
+        const backgroundColor = hostnameColor + '30'; 
+
+        datasets.push({
+            label: `Qualidade (Score) - ${hostname}`,
+            data: dataScores,
+[cite: 43]         yAxisID: 'y-score', 
+            borderColor: borderColor,
+            backgroundColor: backgroundColor,
+[cite: 44]        pointBackgroundColor: scorePointColors,
+            tension: 0.3, 
+            pointRadius: 5,
+            borderWidth: 2,
+            fill: false,
+[cite: 45]              order: 1 // Garante que a linha de score esteja acima
+        });
     });
     
-const latencyMaxScale = Math.ceil((maxLatency + 100) / 500) * 500; 
+    // 2. Criar o Dataset de Latência (Máxima entre todos os Hostnames no Timestamp)
+    
+[cite: 41] const latencyMaxScale = Math.ceil((maxLatency + 100) / 500) * 500; 
 
     // Adiciona o dataset de Latência
     datasets.push({
         label: 'Latência Máxima (ms)',
         data: dataLatency,
-         yAxisID: 'y-latency', 
+[cite: 46]          yAxisID: 'y-latency', 
         borderColor: latencyColor,
         backgroundColor: 'rgba(255, 99, 132, 0.1)',
         tension: 0.3,
         pointRadius: 3,
-                  borderWidth: 2,
+[cite: 47]                   borderWidth: 2,
         fill: false,
         order: 2 // Garante que a linha de latência esteja abaixo do score (visualização)
     });
 
     const ctx = document.getElementById('qualityChart').getContext('2d');
-chartInstance = new Chart(ctx, { 
+[cite: 42] chartInstance = new Chart(ctx, { 
         type: 'line', 
         data: {
             labels: labels,
             datasets: datasets
         },
    
-     options: {
+[cite: 48]      options: {
             responsive: true,
             maintainAspectRatio: false,
             color: color, 
@@ -311,63 +306,63 @@ chartInstance = new Chart(ctx, {
                 mode: 'index',
                 intersect: false,
        
-     },
+[cite: 49]      },
             onClick: handleChartClick,
             scales: {
                 x: {
                     title: { display: true, text: 'Horário do Monitoramento (HH:MM)', color: color },
                     grid: 
-{ color: gridColor },
+[cite: 50] { color: gridColor },
                     ticks: { color: color }
                 },
                 'y-score': { 
                     type: 'linear',
                   
-  position: 'left',
+[cite: 51]   position: 'left',
                     title: { display: true, text: 'Qualidade (Score)', color: color },
                     min: 0,
                     max: 100,
                     grid: { color: gridColor },
   
-                  ticks: { 
+[cite: 52]                   ticks: { 
                         stepSize: 25, 
                         color: color,
                         callback: function(value) {
    
-                         if (value === 100) return 'Excelente';
-if (value === 75) return 'Bom';
+[cite: 53]                          if (value === 100) return 'Excelente';
+[cite: 54] if (value === 75) return 'Bom';
                             if (value === 25) return 'Ruim';
                             if (value === 0) return 'Falha/Outro';
                             return '';
-}
+[cite: 55] }
                     }
                 },
                 'y-latency': { 
                     type: 'linear',
                     position: 'right', 
    
-                 title: { display: true, text: 'Latência TCP (ms)', color: latencyColor },
+[cite: 56]                  title: { display: true, text: 'Latência TCP (ms)', color: latencyColor },
                     min: 0,
                     max: latencyMaxScale, 
                     grid: { 
         
-                drawOnChartArea: false, 
+[cite: 57]                 drawOnChartArea: false, 
                         color: gridColor
                     },
                     ticks: {
                 
-        color: latencyColor
+[cite: 58]         color: latencyColor
                     }
                 }
             },
             plugins: {
                 title: { display: true, text: `Evolução da Qualidade e Latência`, color: color },
   
-              legend: { labels: { color: color } }
+[cite: 59]               legend: { labels: { color: color } }
             }
         }
     });
-}
+[cite: 60] }
 
 // NOVO: Constrói a lista de Hostnames na sidebar
 function buildHostnameSidebar(hostnames) {
@@ -379,9 +374,10 @@ function buildHostnameSidebar(hostnames) {
 
     hostnames.forEach(hostname => {
         const div = document.createElement('div');
+        // REMOVIDO o atributo 'checked' para que não venham pré-selecionados
         div.innerHTML = `
             <label>
-                <input type="checkbox" class="hostname-checkbox" value="${hostname}" checked>
+                <input type="checkbox" class="hostname-checkbox" value="${hostname}">
                 ${hostname}
             </label>
         `;
@@ -418,21 +414,28 @@ function filterChart() {
     const startTimeStr = document.getElementById('startTime').value;
     const endTimeStr = document.getElementById('endTime').value;
     
-    // NOVO: Obter Hostnames selecionados da sidebar
-    const selectedHostnames = Array.from(document.querySelectorAll('.hostname-checkbox:checked'))
+    // Obter Hostnames selecionados da sidebar
+    let selectedHostnames = Array.from(document.querySelectorAll('.hostname-checkbox:checked'))
                                    .map(cb => cb.value);
 
-if (!allData || allData.length === 0) {
+[cite: 61] if (!allData || allData.length === 0) {
         currentDataToDisplay = [];
         return;
-}
+[cite: 62] }
     
-    // Se nenhum hostname estiver selecionado, não mostra nada
+    // CORREÇÃO: Se nenhum Hostname for selecionado, use TODOS os Hostnames únicos para mostrar o gráfico padrão (comportamento original)
     if (selectedHostnames.length === 0) {
-        document.getElementById('statusMessage').textContent = "Selecione pelo menos um Hostname para exibir o gráfico.";
-        drawChart([]);
-        return;
+        const allUniqueHostnames = [...new Set(allData.map(row => row.Hostname))].filter(h => h); // Garante que não é null/undefined
+        selectedHostnames = allUniqueHostnames;
+        
+        // Se ainda for zero (log vazio ou sem hostname), exibe a mensagem de erro
+        if (selectedHostnames.length === 0) {
+            document.getElementById('statusMessage').textContent = "Nenhum Hostname válido encontrado no log carregado.";
+            drawChart([]);
+            return;
+        }
     }
+    // FIM CORREÇÃO
 
     const filteredData = allData.filter(row => {
         const timestamp = row.Timestamp;
@@ -444,13 +447,13 @@ if (!allData || allData.length === 0) {
         const isWithinTime = timeOnly >= filterStart && timeOnly <= filterEnd;
 
      
-   const hostname = row.Hostname;
-        // NOVO: Verifica se o Hostname está na lista de selecionados
+[cite: 63]    const hostname = row.Hostname;
+        // Verifica se o Hostname está na lista de selecionados
         const matchesHostname = selectedHostnames.includes(hostname); 
         
         return isWithinTime && matchesHostname;
     });
-document.getElementById('event-details').style.display = 'none';
+[cite: 64] document.getElementById('event-details').style.display = 'none';
 
     drawChart(filteredData);
 }
@@ -458,12 +461,12 @@ document.getElementById('event-details').style.display = 'none';
 function initMonitor() {
     const statusElement = document.getElementById('statusMessage');
     const fileName = getFileName();
-statusElement.textContent = `Carregando: ${fileName}...`;
+[cite: 65] statusElement.textContent = `Carregando: ${fileName}...`;
     allData = []; 
 
     // Removido a limpeza do hostnameFilter, pois ele não existe mais como input de texto único
     document.getElementById('event-details').style.display = 'none';
-Papa.parse(fileName, {
+[cite: 66] Papa.parse(fileName, {
         download: true, 
         header: true,   
         skipEmptyLines: true,
@@ -473,7 +476,7 @@ Papa.parse(fileName, {
 
             if (allData.length === 0) {
          
-       statusElement.textContent = `Erro: Nenhuma linha de dados válida em ${fileName}.`;
+[cite: 67]        statusElement.textContent = `Erro: Nenhuma linha de dados válida em ${fileName}.`;
                 if (chartInstance) chartInstance.destroy();
                 // Limpa a sidebar de hostnames
                 document.getElementById('hostnameList').innerHTML = '';
@@ -483,11 +486,11 @@ Papa.parse(fileName, {
             statusElement.textContent = `Sucesso! Carregado ${allData.length} registros de ${fileName}.`;
             
             // NOVO: Extrai Hostnames únicos e constrói a sidebar
-            const uniqueHostnames = [...new Set(allData.map(row => row.Hostname))];
+            const uniqueHostnames = [...new Set(allData.map(row => row.Hostname))].filter(h => h);
             buildHostnameSidebar(uniqueHostnames);
 
        
-     filterChart(); 
+[cite: 68]      filterChart(); 
         },
         error: function(error) {
             console.error("Erro ao carregar o CSV:", error);
@@ -496,6 +499,6 @@ Papa.parse(fileName, {
             document.getElementById('event-details').style.display = 'none';
             // Limpa a sidebar de hostnames em caso de erro
             document.getElementById('hostnameList').innerHTML = '';
-}
+[cite: 69] }
     });
 }
