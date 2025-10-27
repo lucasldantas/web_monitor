@@ -31,89 +31,194 @@
             padding: 15px;
             background-color: #fff;
             border-bottom: 1px solid #ddd;
-            display: flex;
+            display: flex; 
             flex-wrap: wrap;
             justify-content: center;
             gap: 10px;
-        }
-        #controls label, #controls select, #controls input, #controls button {
-            padding: 8px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-            font-size: 14px;
-        }
-        #controls button {
-            cursor: pointer;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            transition: background-color 0.3s;
-        }
-        #controls button:hover {
-            background-color: #0056b3;
+            transition: background-color 0.3s, border-color 0.3s;
         }
         #chart-container {
             width: 90%;
-            max-width: 1200px;
-            margin: 20px auto;
-            padding: 20px;
+            margin: 30px auto;
             background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-height: 500px;
+            transition: background-color 0.3s, box-shadow 0.3s;
         }
-        #qualityChart {
-            height: 400px; /* Altura fixa para o gráfico */
-        }
+        
+        /* ESTILIZAÇÃO DO DETALHE DO EVENTO */
         #event-details {
-            margin-top: 20px;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            background-color: #f9f9f9;
-            text-align: left;
-            display: none; /* Escondido por padrão */
+            width: 90%; 
+            margin: 20px auto; 
+            padding: 15px; 
+            background-color: #fff; 
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: none;
+            transition: background-color 0.3s, border-color 0.3s;
         }
+        #event-details h3 {
+            margin-top: 0; 
+            border-bottom: 1px solid #eee; 
+            padding-bottom: 5px;
+            color: #333;
+        }
+        
+        /* Estilização de inputs, select e button */
+        #controls button, 
+        #controls select, 
+        #controls input[type="text"],
+        #controls input[type="time"] { 
+            font-size: 1em;
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            background-color: #fff;
+            color: #333;
+        }
+        
+        /* Estilização para o LABEL (apenas texto) */
+        #controls label {
+            display: flex;
+            align-items: center;
+            padding: 5px 0;
+            font-size: 1em;
+            border: none;
+            background: none;
+        }
+        
+        #controls input[type="text"] { min-width: 150px; }
+        #controls button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #controls button:hover { background-color: #45a049; }
+        #qualityChart { max-height: 460px; }
+
 
         /* ------------------------------------------------------------------
-           MODO ESCURO
+           CSS TEMA ESCURO
            ------------------------------------------------------------------ */
         body.dark-mode {
-            background-color: #2c2c2c;
+            background-color: #1e1e1e;
             color: #f0f0f0;
         }
         body.dark-mode h1 {
             color: #f0f0f0;
         }
         body.dark-mode #controls {
-            background-color: #3a3a3a;
-            border-bottom: 1px solid #555;
-        }
-        body.dark-mode #controls label, body.dark-mode #controls select, body.dark-mode #controls input {
-            background-color: #4a4a4a;
-            color: #f0f0f0;
-            border: 1px solid #666;
+            background-color: #2a2a2a;
+            border-bottom: 1px solid #333;
         }
         body.dark-mode #chart-container {
-            background-color: #3a3a3a;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            background-color: #2a2a2a;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
+        /* Estilização de INPUT e SELECT no TEMA ESCURO */
+        body.dark-mode #controls select, 
+        body.dark-mode #controls input[type="text"],
+        body.dark-mode #controls input[type="time"] {
+            background-color: #333;
+            color: #f0f0f0;
+            border: 1px solid #555;
+        }
+        /* Estilização do LABEL no TEMA ESCURO (apenas texto) */
+        body.dark-mode #controls label {
+            color: #f0f0f0;
+            background: none;
+            border: none;
+        }
+        body.dark-mode #controls button {
+            background-color: #387c3a;
+        }
+        body.dark-mode #controls button:hover {
+            background-color: #4CAF50;
+        }
+        
+        /* Estilização do DETALHE DO EVENTO no TEMA ESCURO */
         body.dark-mode #event-details {
-            background-color: #4a4a4a;
-            border: 1px solid #666;
+            background-color: #2a2a2a;
+            border: 1px solid #333;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
         }
-        .toggle-switch {
-            position: fixed;
+        body.dark-mode #event-details h3 {
+            color: #f0f0f0;
+            border-bottom: 1px solid #555;
+        }
+        body.dark-mode #event-details p {
+            color: #ccc;
+        }
+        body.dark-mode #event-details strong {
+            color: #f0f0f0;
+        }
+
+
+        /* ------------------------------------------------------------------
+           SWITCH TEMA (Botão Deslizante)
+           ------------------------------------------------------------------ */
+        .theme-switch-wrapper {
+            display: flex;
+            align-items: center;
+            position: absolute;
             top: 10px;
             right: 10px;
-            z-index: 1000;
+            font-size: 0.9em;
+            color: inherit; /* Garante que o texto se adapte ao tema */
+        }
+        .theme-switch {
+            display: inline-block;
+            height: 20px;
+            position: relative;
+            width: 40px;
+            margin-left: 10px;
+        }
+        .theme-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            background-color: #ccc;
+            bottom: 0;
+            cursor: pointer;
+            left: 0;
+            right: 0;
+            top: 0;
+            position: absolute;
+            transition: 0.4s;
+            border-radius: 20px;
+        }
+        .slider:before {
+            background-color: white;
+            bottom: 2px;
+            content: "";
+            height: 16px;
+            left: 2px;
+            position: absolute;
+            transition: 0.4s;
+            width: 16px;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #2196f3;
+        }
+        input:checked + .slider:before {
+            transform: translateX(20px);
         }
     </style>
 </head>
 <body>
-    <div class="toggle-switch">
-        <label>
-            <input type="checkbox" id="darkModeToggle" onclick="toggleDarkMode()">
-            <span class="slider round"></span>
+    <div class="theme-switch-wrapper">
+        <span>Tema Escuro</span>
+        <label class="theme-switch" for="checkbox">
+            <input type="checkbox" id="checkbox" />
+            <div class="slider"></div>
         </label>
     </div>
 
@@ -129,17 +234,9 @@
         <label for="dateSelect">Data do Log:</label>
         <input type="text" id="dateSelect" pattern="\d{2}-\d{2}-\d{2}" placeholder="DD-MM-YY">
         
-        <label for="hostnameInput">Adicionar Host (Autocomplete):</label>
-        <input type="text" id="hostnameInput" list="hostnameDatalist" placeholder="Digite para sugestões...">
-        <datalist id="hostnameDatalist"></datalist>
-        <button onclick="addHostname()">Adicionar Host</button>
-
-        <label for="hostnameSelect">Hosts Selecionados:</label>
-        <select id="hostnameSelect" multiple size="4" onchange="filterChart()">
-            <option value="" selected>Todos (Média)</option>
-        </select>
-        <button onclick="clearHostnameSelection()">Limpar Seleção</button>
-
+        <label for="hostnameFilter">Hostname:</label>
+        <input type="text" id="hostnameFilter" placeholder="Ex: ARCO-CD28F..." oninput="filterChart()">
+        
         <label for="startTime">Início (HH:MM):</label>
         <input type="time" id="startTime" value="00:00" onchange="filterChart()">
         
@@ -153,16 +250,14 @@
         <canvas id="qualityChart"></canvas>
         <p id="statusMessage" style="text-align:center; font-weight: bold;"></p>
     </div>
-    
-    <div id="event-details" style="display:none; width: 80%; max-width: 800px; margin: 20px auto;">
-        <h2>Detalhes do Evento Selecionado</h2>
-        <p><strong>Hostname:</strong> <span id="detail-hostname"></span></p>
-        <p><strong>Timestamp:</strong> <span id="detail-timestamp"></span></p>
-        <p><strong>Status da Conexão:</strong> <span id="detail-status"></span></p>
-        <p><strong>Latência TCP:</strong> <span id="detail-latency"></span></p>
-        <p><strong>Status da Conferência:</strong> <span id="detail-conference-status"></span></p>
-    </div>
 
+    <div id="event-details">
+        <h3 style="margin-top: 0;">Detalhes do Evento</h3>
+        <div id="event-content">
+            Clique em um ponto do gráfico para ver os detalhes de troubleshooting.
+        </div>
+    </div>
     <script src="script.js"></script>
+
 </body>
 </html>
