@@ -3,7 +3,6 @@ let chartInstance = null;
 let currentDataToDisplay = []; 
 const AUTO_UPDATE_INTERVAL = 10 * 60 * 1000; // 10 minutos em milissegundos
 let autoUpdateTimer = null; 
-let allHostnames = new Set(); // NOVO: Armazena todos os hostnames únicos
 
 // --------------------------------------------------------------------------
 // Funções Auxiliares
@@ -19,11 +18,12 @@ function getCurrentDateFormatted() {
 
 function mapScore(status) {
     if (!status) return 0;
+    // Adicionado 'Aceitável' para mapear um valor intermediário (75)
+    if (status.toLowerCase() === 'aceitável') return 75; 
 
     switch (status.toLowerCase()) {
         case 'excelente': return 100;
-        case 'bom':
-        case 'aceitável': return 75; // Trata 'aceitável' e 'bom' como 75
+        case 'bom': return 75;
         case 'ruim': return 25;
         default: return 0; 
     }
@@ -36,163 +36,151 @@ function getFileName() {
 }
 
 // --------------------------------------------------------------------------
-// Funções de Controle de Hostname (Novas)
+// Lógica de Tema e Inicialização
 // --------------------------------------------------------------------------
 
-// Preenche o datalist para o autocomplete (sugestões conforme digita)
-function populateHostnameDatalist() {
-    const datalist = document.getElementById('hostnameDatalist');
-    datalist.innerHTML = ''; 
+function toggleDarkMode() {
+    const isDark = document.body.classList.toggle('dark-mode');
+    localStorage.setItem('darkMode', isDark);
+    updateChartTheme(isDark);
+}
+
+function applySavedTheme() {
+    const savedTheme = localStorage.getItem('darkMode');
+    const checkbox = document.getElementById('checkbox');
     
-    Array.from(allHostnames).sort().forEach(hostname => {
-        if (hostname && hostname.trim() !== '') {
-            const option = document.createElement('option');
-            option.value = hostname;
-            datalist.appendChild(option);
-        }
+    if (savedTheme === 'true') {
+        document.body.classList.add('dark-mode');
+        checkbox.checked = true;
+    }
+    
+    checkbox.addEventListener('change', toggleDarkMode);
+    updateChartTheme(savedTheme === 'true');
+}
+
+function startAutoUpdate() {
+    if (autoUpdateTimer) {
+        clearInterval(autoUpdateTimer);
+    }
+    
+    autoUpdateTimer = setInterval(() => {
+        const timestamp = new Date().toLocaleTimeString();
+        console.log(`Autoatualizando dados em ${timestamp}...`);
+        initMonitor();
+    }, AUTO_UPDATE_INTERVAL);
+
+    console.log(`Autoatualização configurada para cada ${AUTO_UPDATE_INTERVAL / 60000} minutos.`);
+}
+
+window.onload = function() {
+    applySavedTheme();
+    document.getElementById('dateSelect').value = getCurrentDateFormatted();
+    
+    document.getElementById('osSelect').addEventListener('change', initMonitor);
+    document.getElementById('dateSelect').addEventListener('change', initMonitor);
+
+    initMonitor(); 
+    startAutoUpdate();
+}
+
+// --------------------------------------------------------------------------
+// Lógica de Detalhe de Evento (CORRIGIDA)
+// --------------------------------------------------------------------------
+
+function displayEventDetails(dataRow) {
+    const detailsContainer = document.getElementById('event-details');
+    const content = document.getElementById('event-content');
+
+    // Campos principais
+    const primaryFields = [
+        { label: "Timestamp", key: "Timestamp" },
+        { label: "Hostname", key: "Hostname" },
+        { label: "Usuário Logado", key: "UserLogged" },
+        { label: "IP Público", key: "IP_Publico" },
+        { label: "Provedor", key: "Provedor" },
+        { label: "Latência TCP (ms)", key: "TCP_Latency_ms" },
+        { label: "Status da Conexão", key: "Connection_Health_Status" },
+    ];
+
+    let html = '';
+    
+    // 1. Adiciona campos principais
+    primaryFields.forEach(field => {
+        const value = dataRow[field.key] || 'N/A';
+        html += `<p><strong>${field.label}:</strong> ${value}</p>`;
     });
-}
 
-// Adiciona o hostname digitado ao select de seleção múltipla
-function addHostname() {
-    const input = document.getElementById('hostnameInput');
-    const select = document.getElementById('hostnameSelect');
-    const hostname = input.value.trim();
+    // 2. Adiciona Hops Dinamicamente
+    html += `<h4 style="margin-top: 15px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Detalhes do Rastreamento (Hops)</h4>`;
 
-    // Verifica se o hostname é válido e ainda não está na seleção
-    if (hostname && allHostnames.has(hostname)) {
+    let foundHops = false;
+    for (let i = 1; i <= 30; i++) { // Verifica até o Hop 30 (ajuste se necessário)
+        const ipKey = `Hop_${i}_IP`;
+        const latencyKey = `Hop_${i}_Latency_ms`;
+
+        const ip = dataRow[ipKey];
+        const latency = dataRow[latencyKey];
         
-        // Verifica se já está selecionado
-        if (Array.from(select.options).some(opt => opt.value === hostname && opt.selected)) {
-            alert(`O Hostname '${hostname}' já está na sua seleção.`);
-            input.value = '';
-            return;
+        // Verifica se o Hop tem IP ou Latência e não é um valor vazio do CSV
+        if (ip || latency) {
+            const ipValue = ip && ip.trim() !== '' ? ip : 'N/A';
+            const latencyValue = latency && latency.trim() !== '' ? `${latency} ms` : 'N/A';
+            
+            // Só exibe se pelo menos um dos valores for relevante
+            if (ipValue !== 'N/A' || latencyValue !== 'N/A') {
+                html += `<p style="margin-top: 5px; margin-bottom: 5px;"><strong>Hop ${i}:</strong> ${ipValue} (${latencyValue})</p>`;
+                foundHops = true;
+            }
         }
-
-        // Remove a opção "Todos" (valor "") se for a única selecionada, e adiciona o novo host
-        const allOption = select.querySelector('option[value=""]');
-        if (allOption && allOption.selected) {
-            allOption.selected = false;
-        }
-
-        // Tenta encontrar a opção existente ou cria uma nova
-        let option = select.querySelector(`option[value="${hostname}"]`);
-        if (!option) {
-             option = document.createElement('option');
-             option.value = hostname;
-             option.textContent = hostname;
-             select.appendChild(option);
-        }
-        
-        option.selected = true; // Seleciona o host
-        
-        input.value = ''; // Limpa o campo de input
-        filterChart();
-    } else if (hostname && !allHostnames.has(hostname)) {
-        alert(`O Hostname '${hostname}' não existe nos dados carregados.`);
     }
-}
-
-// Limpa todas as seleções no select
-function clearHostnameSelection() {
-    const select = document.getElementById('hostnameSelect');
-    // Deseleciona todas as opções
-    Array.from(select.options).forEach(opt => opt.selected = false);
     
-    // Assegura que a opção "Todos (Média)" esteja selecionada
-    const allOption = select.querySelector('option[value=""]');
-    if (allOption) {
-        allOption.selected = true;
+    // Se nenhum Hop foi encontrado (além da mensagem do H4), adiciona uma nota
+    if (!foundHops) {
+        html += `<p style="color: #999;">Nenhum dado detalhado de rastreamento de rota encontrado neste registro.</p>`;
     }
 
-    filterChart();
-}
-
-// Obtém os hostnames selecionados, excluindo a opção "Todos"
-function getSelectedHostnames() {
-    const select = document.getElementById('hostnameSelect');
-    const selectedOptions = Array.from(select.selectedOptions);
-    
-    // Se a única seleção for "Todos (Média)", retorna array vazio para indicar modo Média
-    if (selectedOptions.length === 1 && selectedOptions[0].value === '') {
-        return [];
-    }
-
-    // Retorna apenas os hostnames válidos (excluindo a opção "Todos")
-    return selectedOptions.map(option => option.value).filter(value => value !== '');
-}
-
-
-// --------------------------------------------------------------------------
-// Funções de Processamento de Dados
-// --------------------------------------------------------------------------
-
-function displayEventDetails(row) {
-    document.getElementById('detail-hostname').textContent = row.Hostname || 'N/A';
-    document.getElementById('detail-timestamp').textContent = row.Timestamp || 'N/A';
-    document.getElementById('detail-status').textContent = row['Connection_Health_Status'] || 'N/A';
-    document.getElementById('detail-latency').textContent = (row['TCP_Latency_ms'] ? parseFloat(row['TCP_Latency_ms']).toFixed(2) + ' ms' : 'N/A');
-    document.getElementById('detail-conference-status').textContent = row['Conference_Health_Status'] || 'N/A';
-    
-    document.getElementById('event-details').style.display = 'block';
+    content.innerHTML = html;
+    detailsContainer.style.display = 'block';
 }
 
 function handleChartClick(event) {
     const points = chartInstance.getElementsAtEventForMode(event, 'index', { intersect: true }, false);
+
     if (points.length === 0) {
         document.getElementById('event-details').style.display = 'none';
         return;
     }
 
     const dataIndex = points[0].index;
-    
-    const selectedHostnames = getSelectedHostnames();
-    const isSingleHost = selectedHostnames.length === 1;
+    const clickedRow = currentDataToDisplay[dataIndex];
 
-    if (isSingleHost) {
-        const timeLabel = chartInstance.data.labels[dataIndex];
-        
-        // Encontra o registro bruto mais próximo
-        const clickedRow = currentDataToDisplay.find(row => 
-            row.Timestamp && 
-            row.Timestamp.split(' ')[1].substring(0, 5) === timeLabel && 
-            row.Hostname === selectedHostnames[0]
-        );
-
-        if (clickedRow) {
-            displayEventDetails(clickedRow);
-        } else {
-            document.getElementById('event-details').style.display = 'none';
-        }
+    if (clickedRow) {
+        displayEventDetails(clickedRow);
     }
 }
 
-// Função auxiliar para gerar cores distintas para cada Hostname
-function getDistinctColor(index, isDark) {
-    const colors = [
-        '#36A2EB', // Azul
-        '#FF6384', // Vermelho/Rosa
-        '#4BC0C0', // Ciano
-        '#FFCD56', // Amarelo
-        '#9966FF', // Roxo
-        '#C9CBCE', // Cinza
-        '#FF9F40'  // Laranja
-    ];
-    // Se for modo escuro, clareia um pouco as cores primárias
-    if (isDark) {
-        const darkColors = ['#5b9ffc', '#ff8eab', '#6dd6d6', '#ffd673', '#b388ff', '#e0e0e0', '#ffb969'];
-        return darkColors[index % darkColors.length];
+// --------------------------------------------------------------------------
+// Lógica de Gráfico
+// --------------------------------------------------------------------------
+
+function updateChartTheme(isDark) {
+    if (chartInstance) {
+        const dataToRedraw = currentDataToDisplay;
+        currentDataToDisplay = [];
+        drawChart(dataToRedraw); 
     }
-    return colors[index % colors.length];
 }
 
-function drawChart(dataToDisplay, selectedHostnames) {
+
+function drawChart(dataToDisplay) {
     const statusElement = document.getElementById('statusMessage');
+
     if (chartInstance) {
         chartInstance.destroy();
     }
     
-    currentDataToDisplay = dataToDisplay; 
+    currentDataToDisplay = dataToDisplay;
+    
     if (dataToDisplay.length === 0) {
         statusElement.textContent = "Nenhum dado encontrado no intervalo ou Hostname selecionado.";
         document.getElementById('event-details').style.display = 'none';
@@ -201,118 +189,71 @@ function drawChart(dataToDisplay, selectedHostnames) {
 
     statusElement.textContent = ""; 
     
+    const labels = [];
+    const dataScores = [];
+    const dataLatency = []; 
+    const scorePointColors = [];
+    
     const isDark = document.body.classList.contains('dark-mode');
     const color = isDark ? '#f0f0f0' : '#333';
     const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-    const latencyColor = isDark ? '#FF6384' : '#E84A5F'; // Cor padrão para Latência
-    
+    const latencyColor = isDark ? '#FF6384' : '#E84A5F';
+
     let maxLatency = 0;
-    
-    // --- Lógica de Geração de Datasets ---
-    const datasets = [];
-    const labels = [];
-    let processingHostnames = selectedHostnames;
-    const isAverageMode = processingHostnames.length === 0;
-    
-    // 1. Determinar os labels de tempo únicos (eixos X)
-    const timeLabels = new Set(dataToDisplay.map(row => row.Timestamp.split(' ')[1].substring(0, 5)));
-    const sortedTimeLabels = Array.from(timeLabels).sort();
-    labels.push(...sortedTimeLabels);
-    
-    // Se nenhum host foi selecionado, processamos a média
-    if (isAverageMode) {
-        processingHostnames = ['__AVERAGE__']; 
-    }
-    
-    // 2. Criar os datasets de Qualidade e Latência para cada Hostname ou para a Média
-    processingHostnames.forEach((hostname, index) => {
-        const isAverage = hostname === '__AVERAGE__';
-        const labelBase = isAverage ? 'Média Geral' : hostname;
-        
-        const hostData = isAverage ? dataToDisplay : dataToDisplay.filter(row => row.Hostname === hostname);
-        
-        // Cores e estilos
-        const scoreColor = isAverage ? '#FF9F40' : getDistinctColor(index, isDark); 
-        const lineWeight = isAverage ? 3 : 2;
-        const pointRadius = isAverage ? 4 : 3;
-        
-        const dataScores = [];
-        const dataLatency = []; 
 
-        sortedTimeLabels.forEach(timeLabel => {
-            // Filtra os dados no período de 1 minuto
-            const currentPeriodData = hostData.filter(row => row.Timestamp.split(' ')[1].substring(0, 5) === timeLabel);
-            
-            if (currentPeriodData.length > 0) {
-                
-                const scores = currentPeriodData.map(row => mapScore(row['Connection_Health_Status']))
-                                                .filter(s => s !== null);
-                const latencies = currentPeriodData.map(row => parseFloat(row['TCP_Latency_ms']))
-                                                    .filter(l => !isNaN(l)); // Filtra valores não-numéricos (NaN)
-                
-                // Média para o score e latência
-                const score = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
-                const latency = latencies.length > 0 ? latencies.reduce((a, b) => a + b, 0) / latencies.length : null; 
-                
-                dataScores.push(score);
-                dataLatency.push(latency);
-                
-                if (latency !== null && latency > maxLatency) maxLatency = latency;
-                
-            } else {
-                dataScores.push(null); // Sem dados neste período
-                dataLatency.push(null); // Sem dados neste período
-            }
-        });
+    dataToDisplay.forEach(row => {
+        const timestamp = row.Timestamp;
+        const scoreStatus = row['Connection_Health_Status'];
+        const score = mapScore(scoreStatus);
+        const latency = parseFloat(row['TCP_Latency_ms']) || 0; 
         
-        // Adicionar dataset de Qualidade (Score)
-        datasets.push({
-            label: `${labelBase} (Qualidade)`,
-            data: dataScores,
-            yAxisID: 'y-score', 
-            borderColor: scoreColor,
-            backgroundColor: `${scoreColor}33`, 
-            pointBackgroundColor: scoreColor,
-            tension: 0.3, 
-            pointRadius: pointRadius,
-            borderWidth: lineWeight,
-            fill: false,
-            order: 1 
-        });
-        
-        // Adicionar dataset de Latência
-        datasets.push({
-            label: `${labelBase} (Latência)`,
-            data: dataLatency,
-            yAxisID: 'y-latency', 
-            // CORREÇÃO: Usa a cor padrão de latência para a linha se for a média
-            borderColor: isAverage ? latencyColor : scoreColor,
-            backgroundColor: isAverage ? 'rgba(255, 99, 132, 0.1)' : `${scoreColor}33`,
-            tension: 0.3,
-            pointRadius: pointRadius,
-            borderWidth: lineWeight,
-            fill: false,
-            // CORREÇÃO: No modo Média, a Latência DEVE ser visível.
-            hidden: !isAverage, 
-            order: 2
-        });
+        const timeOnly = timestamp.split(' ')[1]; 
+        labels.push(timeOnly.substring(0, 5));
+        dataScores.push(score);
+        dataLatency.push(latency); 
+
+        if (latency > maxLatency) maxLatency = latency;
+
+        if (score === 100) scorePointColors.push('#4BC0C0');
+        else if (score === 75) scorePointColors.push('#FFCD56');
+        else scorePointColors.push('#FF6384'); 
     });
-    // --- Fim da Lógica de Geração de Datasets ---
 
-    // Escala máxima para o eixo Y de Latência (arredondado para o próximo múltiplo de 500)
     const latencyMaxScale = Math.ceil((maxLatency + 100) / 500) * 500; 
-    
-    // Se a latência for 0, garante que o max seja um valor razoável (ex: 500)
-    if (latencyMaxScale === 0) {
-        latencyMaxScale = 500;
-    }
 
     const ctx = document.getElementById('qualityChart').getContext('2d');
+
     chartInstance = new Chart(ctx, { 
         type: 'line', 
         data: {
             labels: labels,
-            datasets: datasets, 
+            datasets: [
+                {
+                    label: 'Qualidade (Score)',
+                    data: dataScores,
+                    yAxisID: 'y-score', 
+                    borderColor: isDark ? '#A0D8FF' : '#36A2EB',
+                    backgroundColor: isDark ? 'rgba(160, 216, 255, 0.2)' : 'rgba(54, 162, 235, 0.2)',
+                    pointBackgroundColor: scorePointColors,
+                    tension: 0.3, 
+                    pointRadius: 5,
+                    borderWidth: 2,
+                    fill: false,
+                    order: 1
+                },
+                {
+                    label: 'Latência (ms)',
+                    data: dataLatency,
+                    yAxisID: 'y-latency', 
+                    borderColor: latencyColor,
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                    tension: 0.3,
+                    pointRadius: 3,
+                    borderWidth: 2,
+                    fill: false,
+                    order: 2
+                }
+            ]
         },
         options: {
             responsive: true,
@@ -322,8 +263,7 @@ function drawChart(dataToDisplay, selectedHostnames) {
                 mode: 'index',
                 intersect: false,
             },
-            // Desativa o clique em modo multi-host ou média
-            onClick: selectedHostnames.length === 1 ? handleChartClick : null, 
+            onClick: handleChartClick,
             scales: {
                 x: {
                     title: { display: true, text: 'Horário do Monitoramento (HH:MM)', color: color },
@@ -372,62 +312,36 @@ function drawChart(dataToDisplay, selectedHostnames) {
     });
 }
 
+
 function filterChart() {
     const startTimeStr = document.getElementById('startTime').value;
     const endTimeStr = document.getElementById('endTime').value;
-    
-    const selectedHostnames = getSelectedHostnames(); 
-    const isFilteringByHost = selectedHostnames.length > 0;
-    
+    const hostnameFilter = document.getElementById('hostnameFilter').value.trim();
+
     if (!allData || allData.length === 0) {
         currentDataToDisplay = [];
-        // Chamar drawChart() aqui garante que o statusMessage seja atualizado se necessário.
-        drawChart([], selectedHostnames);
-        return;
+        return; 
     }
 
-    let dataForDisplay;
-    
-    if (isFilteringByHost) {
-        // Se hosts foram selecionados, filtramos por tempo E pelos hosts
-        dataForDisplay = allData.filter(row => {
-            const timestamp = row.Timestamp;
-            if (!timestamp) return false;
-            
-            const timeOnly = timestamp.split(' ')[1]; 
-            const filterStart = startTimeStr + ':00';
-            const filterEnd = endTimeStr + ':59';
-            const isWithinTime = timeOnly >= filterStart && timeOnly <= filterEnd;
+    const filteredData = allData.filter(row => {
+        const timestamp = row.Timestamp;
+        if (!timestamp) return false;
+        
+        const timeOnly = timestamp.split(' ')[1]; 
+        const filterStart = startTimeStr + ':00';
+        const filterEnd = endTimeStr + ':59';
+        const isWithinTime = timeOnly >= filterStart && timeOnly <= filterEnd;
 
-            const hostname = row.Hostname;
-            const matchesHostname = selectedHostnames.includes(hostname);
-            
-            return isWithinTime && matchesHostname;
-        });
-    } else {
-        // Se NENHUM host foi selecionado (MÉDIA GERAL), filtramos APENAS por tempo
-        dataForDisplay = allData.filter(row => {
-            const timestamp = row.Timestamp;
-            if (!timestamp) return false;
-            
-            const timeOnly = timestamp.split(' ')[1]; 
-            const filterStart = startTimeStr + ':00';
-            const filterEnd = endTimeStr + ':59';
-            const isWithinTime = timeOnly >= filterStart && timeOnly <= filterEnd;
+        const hostname = row.Hostname;
+        const matchesHostname = hostnameFilter === '' || hostname === hostnameFilter; 
+        
+        return isWithinTime && matchesHostname;
+    });
 
-            return isWithinTime;
-        });
-    }
-    
     document.getElementById('event-details').style.display = 'none';
 
-    drawChart(dataForDisplay, selectedHostnames); 
+    drawChart(filteredData);
 }
-
-
-// --------------------------------------------------------------------------
-// Funções de Inicialização e Dark Mode
-// --------------------------------------------------------------------------
 
 function initMonitor() {
     const statusElement = document.getElementById('statusMessage');
@@ -436,9 +350,7 @@ function initMonitor() {
     statusElement.textContent = `Carregando: ${fileName}...`;
     allData = []; 
 
-    document.getElementById('hostnameInput').value = ""; // Limpa o input de autocomplete
-    // Não chama clearHostnameSelection() aqui para manter a seleção de hostnames após a atualização
-    // clearHostnameSelection(); 
+    document.getElementById('hostnameFilter').value = ""; 
     document.getElementById('event-details').style.display = 'none';
 
     Papa.parse(fileName, {
@@ -447,29 +359,7 @@ function initMonitor() {
         skipEmptyLines: true,
         complete: function(results) {
             
-            allData = results.data.filter(row => row.Timestamp && row['Connection_Health_Status'] && row['TCP_Latency_ms'] && row.Hostname); 
-            
-            // NOVO: Extrair hostnames únicos e preencher o datalist
-            allHostnames = new Set(allData.map(row => row.Hostname).filter(h => h && h.trim() !== ''));
-            populateHostnameDatalist(); 
-            
-            // Verifica se a opção "Todos (Média)" existe e a adiciona/mantém se a lista estiver vazia
-            const select = document.getElementById('hostnameSelect');
-            if (!select.querySelector('option[value=""]')) {
-                const allOption = document.createElement('option');
-                allOption.value = '';
-                allOption.textContent = 'Todos (Média)';
-                select.prepend(allOption);
-                allOption.selected = true; // Seleciona por padrão
-            }
-
-            // Remove hostnames que não existem mais no arquivo CSV
-            Array.from(select.options).forEach(option => {
-                if (option.value !== '' && !allHostnames.has(option.value)) {
-                    option.remove();
-                }
-            });
-
+            allData = results.data.filter(row => row.Timestamp && row['Connection_Health_Status'] && row['TCP_Latency_ms']); 
 
             if (allData.length === 0) {
                 statusElement.textContent = `Erro: Nenhuma linha de dados válida em ${fileName}.`;
@@ -485,45 +375,7 @@ function initMonitor() {
             console.error("Erro ao carregar o CSV:", error);
             statusElement.textContent = `ERRO 404: Não foi possível encontrar o arquivo ${fileName}. Verifique a data e o nome.`;
             if (chartInstance) chartInstance.destroy();
+            document.getElementById('event-details').style.display = 'none';
         }
     });
-
-    if (autoUpdateTimer) clearInterval(autoUpdateTimer);
-    autoUpdateTimer = setInterval(initMonitor, AUTO_UPDATE_INTERVAL); 
 }
-
-function toggleDarkMode() {
-    const body = document.body;
-    body.classList.toggle('dark-mode');
-    
-    // Armazena a preferência no Local Storage
-    localStorage.setItem('darkMode', body.classList.contains('dark-mode'));
-
-    // Redesenha o gráfico para aplicar as novas cores
-    if (chartInstance) {
-        filterChart(); 
-    }
-}
-
-function init() {
-    // Define a data atual
-    const dateInput = document.getElementById('dateSelect');
-    if (!dateInput.value) {
-        dateInput.value = getCurrentDateFormatted();
-    }
-
-    // Carrega a preferência de dark mode
-    if (localStorage.getItem('darkMode') === 'true') {
-        document.body.classList.add('dark-mode');
-        document.getElementById('darkModeToggle').checked = true;
-    }
-    
-    // Adiciona o listener para o botão de toggle
-    const checkbox = document.getElementById('darkModeToggle');
-    checkbox.addEventListener('change', toggleDarkMode);
-
-    // Inicia o monitoramento (carrega o log do dia)
-    initMonitor(); 
-}
-
-window.onload = init;
