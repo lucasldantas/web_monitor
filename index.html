@@ -13,22 +13,21 @@
            CSS GERAL / CLARO
            ------------------------------------------------------------------ */
         body {
-        
-[cite: 71]     font-family: Arial, sans-serif;
+            font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
             background-color: #f4f4f9;
             color: #333;
             transition: background-color 0.3s, color 0.3s;
-[cite: 72] }
+        }
         h1 {
             text-align: center;
-[cite: 73] color: #333;
+            color: #333;
             margin-top: 20px;
         }
         #controls {
             text-align: center;
-[cite: 74] margin: 20px 0;
+            margin: 20px 0;
             padding: 15px;
             background-color: #fff;
             border-bottom: 1px solid #ddd;
@@ -36,81 +35,34 @@
             flex-wrap: wrap;
             justify-content: center;
             gap: 10px;
-[cite: 75] transition: background-color 0.3s, border-color 0.3s;
+            transition: background-color 0.3s, border-color 0.3s;
         }
-        
-        /* NOVO CSS para o layout com Sidebar */
-        #main-layout {
-            display: flex;
-            gap: 20px;
-            width: 95%; /* Ajuste a largura geral */
-            margin: 0 auto;
-        }
-
-        #sidebar {
-            flex: 0 0 250px; /* Largura fixa para a sidebar */
-            background-color: #fff;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            border-radius: 8px;
-            transition: background-color 0.3s, box-shadow 0.3s;
-            max-height: 70vh; /* Altura máxima da sidebar */
-            overflow-y: auto; /* Scroll se o conteúdo for maior */
-        }
-        
-        #content-area {
-            flex-grow: 1; /* Ocupa o restante do espaço */
-        }
-
-        #hostnameList {
-            margin-top: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            padding: 5px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            max-height: 250px;
-            overflow-y: auto;
-        }
-        
-        #hostnameList label {
-            display: block;
-            cursor: pointer;
-            padding: 2px;
-        }
-        
-        #hostnameList label:hover {
-            background-color: #f0f0f0;
-        }
-        /* FIM NOVO CSS para o layout com Sidebar */
-
         #chart-container {
-            width: 100%; /* Ocupa a largura total da content-area */
-[cite: 76] margin: 30px auto;
+            width: 90%;
+            margin: 30px auto;
             background-color: #fff;
             padding: 20px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             border-radius: 8px;
             max-height: 500px;
-[cite: 77] transition: background-color 0.3s, box-shadow 0.3s;
+            transition: background-color 0.3s, box-shadow 0.3s;
         }
         
-        /* ESTILIZAÇÃO DO DETALHE O EVENTO */
+        /* ESTILIZAÇÃO DO DETALHE DO EVENTO */
         #event-details {
-            width: 100%; /* Ocupa a largura total da content-area */
-[cite: 78] margin: 20px auto; 
+            width: 90%; 
+            margin: 20px auto; 
             padding: 15px; 
             background-color: #fff; 
             border: 1px solid #ddd; 
             border-radius: 8px; 
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             display: none;
-[cite: 79] transition: background-color 0.3s, border-color 0.3s;
+            transition: background-color 0.3s, border-color 0.3s;
         }
         #event-details h3 {
-            margin-top: 0;
-[cite: 80] border-bottom: 1px solid #eee; 
+            margin-top: 0; 
+            border-bottom: 1px solid #eee; 
             padding-bottom: 5px;
             color: #333;
         }
@@ -119,39 +71,35 @@
         #controls button, 
         #controls select, 
         #controls input[type="text"],
-        #controls input[type="time"],
-        #sidebar button { /* Adicionado botão da sidebar */
+        #controls input[type="time"] { 
             font-size: 1em;
-[cite: 81] padding: 5px;
+            padding: 5px;
             border-radius: 4px;
             border: 1px solid #ccc;
             background-color: #fff;
             color: #333;
-[cite: 82] }
+        }
         
         /* Estilização para o LABEL (apenas texto) */
-        #controls label, #sidebar label { /* Adicionado label da sidebar */
+        #controls label {
             display: flex;
-[cite: 83] align-items: center;
+            align-items: center;
             padding: 5px 0;
             font-size: 1em;
             border: none;
             background: none;
-[cite: 84] }
+        }
         
-        #controls input[type="text"] { min-width: 150px;
-[cite: 85] }
-        #controls button, #sidebar button { /* Adicionado botão da sidebar */
+        #controls input[type="text"] { min-width: 150px; }
+        #controls button {
             background-color: #4CAF50;
-[cite: 86] color: white;
+            color: white;
             border: none;
             cursor: pointer;
             transition: background-color 0.3s;
         }
-        #controls button:hover, #sidebar button:hover { background-color: #45a049;
-[cite: 87] }
-        #qualityChart { max-height: 460px;
-[cite: 88] }
+        #controls button:hover { background-color: #45a049; }
+        #qualityChart { max-height: 460px; }
 
 
         /* ------------------------------------------------------------------
@@ -159,72 +107,56 @@
            ------------------------------------------------------------------ */
         body.dark-mode {
             background-color: #1e1e1e;
-[cite: 89] color: #f0f0f0;
+            color: #f0f0f0;
         }
         body.dark-mode h1 {
             color: #f0f0f0;
-[cite: 90] }
+        }
         body.dark-mode #controls {
             background-color: #2a2a2a;
-[cite: 91] border-bottom: 1px solid #333;
+            border-bottom: 1px solid #333;
         }
-        /* Tema Escuro para Sidebar */
-        body.dark-mode #sidebar {
-            background-color: #2a2a2a;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-        }
-        body.dark-mode #hostnameList {
-             border: 1px solid #555;
-        }
-        body.dark-mode #hostnameList label:hover {
-            background-color: #333;
-        }
-        
         body.dark-mode #chart-container {
             background-color: #2a2a2a;
-[cite: 92] box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
         /* Estilização de INPUT e SELECT no TEMA ESCURO */
         body.dark-mode #controls select, 
         body.dark-mode #controls input[type="text"],
-        body.dark-mode #controls input[type="time"],
-        body.dark-mode #sidebar select, 
-        body.dark-mode #sidebar input[type="text"],
-        body.dark-mode #sidebar input[type="time"] { /* Adicionado inputs da sidebar (embora não haja) */
+        body.dark-mode #controls input[type="time"] {
             background-color: #333;
-[cite: 93] color: #f0f0f0;
+            color: #f0f0f0;
             border: 1px solid #555;
         }
         /* Estilização do LABEL no TEMA ESCURO (apenas texto) */
-        body.dark-mode #controls label, 
-        body.dark-mode #sidebar label { /* Adicionado label da sidebar */
+        body.dark-mode #controls label {
             color: #f0f0f0;
-[cite: 94] background: none;
+            background: none;
             border: none;
         }
-        body.dark-mode #controls button, body.dark-mode #sidebar button { /* Adicionado botão da sidebar */
+        body.dark-mode #controls button {
             background-color: #387c3a;
-[cite: 95] }
-        body.dark-mode #controls button:hover, body.dark-mode #sidebar button:hover { /* Adicionado botão da sidebar */
+        }
+        body.dark-mode #controls button:hover {
             background-color: #4CAF50;
-[cite: 96] }
+        }
         
         /* Estilização do DETALHE DO EVENTO no TEMA ESCURO */
         body.dark-mode #event-details {
             background-color: #2a2a2a;
-[cite: 97] border: 1px solid #333;
+            border: 1px solid #333;
             box-shadow: 0 1px 3px rgba(0,0,0,0.5);
         }
         body.dark-mode #event-details h3 {
             color: #f0f0f0;
-[cite: 98] border-bottom: 1px solid #555;
+            border-bottom: 1px solid #555;
         }
         body.dark-mode #event-details p {
             color: #ccc;
-[cite: 99] }
+        }
         body.dark-mode #event-details strong {
             color: #f0f0f0;
-[cite: 100] }
+        }
 
 
         /* ------------------------------------------------------------------
@@ -232,29 +164,28 @@
            ------------------------------------------------------------------ */
         .theme-switch-wrapper {
             display: flex;
-[cite: 101] align-items: center;
+            align-items: center;
             position: absolute;
             top: 10px;
             right: 10px;
             font-size: 0.9em;
-            color: inherit;
-[cite: 102] /* Garante que o texto se adapte ao tema */
+            color: inherit; /* Garante que o texto se adapte ao tema */
         }
         .theme-switch {
             display: inline-block;
-[cite: 103] height: 20px;
+            height: 20px;
             position: relative;
             width: 40px;
             margin-left: 10px;
         }
         .theme-switch input {
             opacity: 0;
-[cite: 104] width: 0;
+            width: 0;
             height: 0;
         }
         .slider {
             background-color: #ccc;
-[cite: 105] bottom: 0;
+            bottom: 0;
             cursor: pointer;
             left: 0;
             right: 0;
@@ -262,10 +193,10 @@
             position: absolute;
             transition: 0.4s;
             border-radius: 20px;
-[cite: 106] }
+        }
         .slider:before {
             background-color: white;
-[cite: 107] bottom: 2px;
+            bottom: 2px;
             content: "";
             height: 16px;
             left: 2px;
@@ -273,13 +204,13 @@
             transition: 0.4s;
             width: 16px;
             border-radius: 50%;
-[cite: 108] }
+        }
         input:checked + .slider {
             background-color: #2196f3;
-[cite: 109] }
+        }
         input:checked + .slider:before {
             transform: translateX(20px);
-[cite: 110] }
+        }
     </style>
 </head>
 <body>
@@ -295,8 +226,7 @@
 
     <div id="controls">
         <label for="osSelect">Sistema Operacional:</label>
-     
-[cite: 111]    <select id="osSelect">
+        <select id="osSelect">
             <option value="MacOS">Mac</option>
             <option value="Windows">Windows</option>
         </select>
@@ -304,38 +234,27 @@
         <label for="dateSelect">Data do Log:</label>
         <input type="text" id="dateSelect" pattern="\d{2}-\d{2}-\d{2}" placeholder="DD-MM-YY">
         
-        [cite: 112]        <label for="startTime">Início (HH:MM):</label>
-        <input type="time" id="startTime" value="00:00" onchange="applyHostnameFilter()"> <label for="endTime">Fim (HH:MM):</label>
-        <input type="time" id="endTime" value="23:59" onchange="applyHostnameFilter()"> <button onclick="initMonitor()">Carregar Log</button>
+        <label for="hostnameFilter">Hostname:</label>
+        <input type="text" id="hostnameFilter" placeholder="Ex: ARCO-CD28F..." oninput="filterChart()">
+        
+        <label for="startTime">Início (HH:MM):</label>
+        <input type="time" id="startTime" value="00:00" onchange="filterChart()">
+        
+        <label for="endTime">Fim (HH:MM):</label>
+        <input type="time" id="endTime" value="23:59" onchange="filterChart()">
+        
+        <button onclick="initMonitor()">Carregar Log</button>
     </div>
 
-    <div id="main-layout">
-        
-        <div id="sidebar">
-            <h3>Filtrar Hostname(s)</h3>
-            
-            <label for="hostnameSearch">Pesquisar:</label>
-            <input type="text" id="hostnameSearch" placeholder="Digite para filtrar a lista..." oninput="filterHostnameList()">
-            
-            <p>Selecione para comparar:</p>
-            <div id="hostnameList">
-                </div>
-            <button onclick="applyHostnameFilter()" style="width: 100%; margin-top: 10px;">Aplicar Filtro</button>
-        </div>
+    <div id="chart-container">
+        <canvas id="qualityChart"></canvas>
+        <p id="statusMessage" style="text-align:center; font-weight: bold;"></p>
+    </div>
 
-        <div id="content-area">
-            <div id="chart-container">
-                <canvas id="qualityChart"></canvas>
-                <p id="statusMessage" style="text-align:center;
-[cite: 113] font-weight: bold;"></p>
-            </div>
-
-            <div id="event-details">
-                <h3 style="margin-top: 0;">Detalhes do Evento</h3>
-                <div id="event-content">
-                    Clique em um ponto do gráfico para ver os detalhes de troubleshooting.
-                </div>
-            </div>
+    <div id="event-details">
+        <h3 style="margin-top: 0;">Detalhes do Evento</h3>
+        <div id="event-content">
+            Clique em um ponto do gráfico para ver os detalhes de troubleshooting.
         </div>
     </div>
     <script src="script.js"></script>
