@@ -1,3 +1,4 @@
 "Timestamp","Hostname","UserLogged","Cidade","Estado","IP_Publico","Provedor","LocalIP","TargetHost","TCP_Latency_ms","TCP_Status","Connection_Health_Score","Connection_Health_Status","Hop_1_IP","Hop_1_Latency_ms"
 "2025-10-31 03:05:48","ARCO-PE0DQH5A","danielcruz","Desconhecida","ND","0.0.0.0","Desconhecido","0.0.0.0","meet.google.com",,"False","0","Falha Crítica (Serviço Inacessível)","2804:d55:5e02:3400:1694:48ff:fe9d:f0a8","9"
 "2025-10-31 04:42:20","ARCO-PE0DQH5A","danielcruz","Curitiba","PR","200.103.129.125","V tal","200.103.129.125","meet.google.com",,"False","0","Falha Crítica (Serviço Inacessível)","2804:d55:5e02:3400:1694:48ff:fe9d:f0a8","17"
+"2025-10-31 05:05:18","ARCO-PE0DQH5A","danielcruz","Desconhecida","ND","0.0.0.0","Desconhecido","0.0.0.0","meet.google.com",,"False","0","Falha Crítica (Serviço Inacessível)","2804:d55:5e02:3400:1694:48ff:fe9d:f0a8","2"
