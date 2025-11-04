@@ -1,265 +1,263 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🖥️ Monitor de conexão com o Google Meet 📊</title>
-    
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <!-- NOVO: O plugin Chart.js Annotation é necessário para desenhar a linha de 100ms -->
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.1.0/dist/chartjs-plugin-annotation.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-    
-    <style>
-        /* ------------------------------------------------------------------
-           CSS GERAL / CLARO
-           ------------------------------------------------------------------ */
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f9;
-            color: #333;
-            transition: background-color 0.3s, color 0.3s;
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-            margin-top: 20px;
-        }
-        #controls {
-            text-align: center;
-            margin: 20px 0;
-            padding: 15px;
-            background-color: #fff;
-            border-bottom: 1px solid #ddd;
-            display: flex; 
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 10px;
-            transition: background-color 0.3s, border-color 0.3s;
-        }
-        #chart-container {
-            width: 90%;
-            margin: 30px auto;
-            background-color: #fff;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            border-radius: 8px;
-            max-height: 500px;
-            transition: background-color 0.3s, box-shadow 0.3s;
-        }
-        
-        /* ESTILIZAÇÃO DO DETALHE DO EVENTO */
-        #event-details {
-            width: 90%; 
-            margin: 20px auto; 
-            padding: 15px; 
-            background-color: #fff; 
-            border: 1px solid #ddd; 
-            border-radius: 8px; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            display: none;
-            transition: background-color 0.3s, border-color 0.3s;
-        }
-        #event-details h3 {
-            margin-top: 0; 
-            border-bottom: 1px solid #eee; 
-            padding-bottom: 5px;
-            color: #333;
-        }
-        
-        /* Estilização de inputs, select e button */
-        #controls button, 
-        #controls select, 
-        #controls input[type="text"],
-        #controls input[type="time"] { 
-            font-size: 1em;
-            padding: 5px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-            background-color: #fff;
-            color: #333;
-        }
-        
-        /* Estilização para o LABEL (apenas texto) */
-        #controls label {
-            display: flex;
-            align-items: center;
-            padding: 5px 0;
-            font-size: 1em;
-            border: none;
-            background: none;
-        }
-        
-        #controls input[type="text"] { min-width: 150px; }
-        #controls button {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        #controls button:hover { background-color: #45a049; }
-        #qualityChart { max-height: 460px; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🖥️ Monitor de conexão com o Google Meet 📊</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    
+    <style>
+        /* ------------------------------------------------------------------
+           CSS GERAL / CLARO
+           ------------------------------------------------------------------ */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            color: #333;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-top: 20px;
+        }
+        #controls {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #fff;
+            border-bottom: 1px solid #ddd;
+            display: flex; 
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        #chart-container {
+            width: 90%;
+            margin: 30px auto;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            max-height: 500px;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        
+        /* ESTILIZAÇÃO DO DETALHE DO EVENTO */
+        #event-details {
+            width: 90%; 
+            margin: 20px auto; 
+            padding: 15px; 
+            background-color: #fff; 
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: none;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        #event-details h3 {
+            margin-top: 0; 
+            border-bottom: 1px solid #eee; 
+            padding-bottom: 5px;
+            color: #333;
+        }
+        
+        /* Estilização de inputs, select e button */
+        #controls button, 
+        #controls select, 
+        #controls input[type="text"],
+        #controls input[type="time"] { 
+            font-size: 1em;
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            background-color: #fff;
+            color: #333;
+        }
+        
+        /* Estilização para o LABEL (apenas texto) */
+        #controls label {
+            display: flex;
+            align-items: center;
+            padding: 5px 0;
+            font-size: 1em;
+            border: none;
+            background: none;
+        }
+        
+        #controls input[type="text"] { min-width: 150px; }
+        #controls button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #controls button:hover { background-color: #45a049; }
+        #qualityChart { max-height: 460px; }
 
 
-        /* ------------------------------------------------------------------
-           CSS TEMA ESCURO
-           ------------------------------------------------------------------ */
-        body.dark-mode {
-            background-color: #1e1e1e;
-            color: #f0f0f0;
-        }
-        body.dark-mode h1 {
-            color: #f0f0f0;
-        }
-        body.dark-mode #controls {
-            background-color: #2a2a2a;
-            border-bottom: 1px solid #333;
-        }
-        body.dark-mode #chart-container {
-            background-color: #2a2a2a;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-        }
-        /* Estilização de INPUT e SELECT no TEMA ESCURO */
-        body.dark-mode #controls select, 
-        body.dark-mode #controls input[type="text"],
-        body.dark-mode #controls input[type="time"] {
-            background-color: #333;
-            color: #f0f0f0;
-            border: 1px solid #555;
-        }
-        /* Estilização do LABEL no TEMA ESCURO (apenas texto) */
-        body.dark-mode #controls label {
-            color: #f0f0f0;
-            background: none;
-            border: none;
-        }
-        body.dark-mode #controls button {
-            background-color: #387c3a;
-        }
-        body.dark-mode #controls button:hover {
-            background-color: #4CAF50;
-        }
-        
-        /* Estilização do DETALHE DO EVENTO no TEMA ESCURO */
-        body.dark-mode #event-details {
-            background-color: #2a2a2a;
-            border: 1px solid #333;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
-        }
-        body.dark-mode #event-details h3 {
-            color: #f0f0f0;
-            border-bottom: 1px solid #555;
-        }
-        body.dark-mode #event-details p {
-            color: #ccc;
-        }
-        body.dark-mode #event-details strong {
-            color: #f0f0f0;
-        }
+        /* ------------------------------------------------------------------
+           CSS TEMA ESCURO
+           ------------------------------------------------------------------ */
+        body.dark-mode {
+            background-color: #1e1e1e;
+            color: #f0f0f0;
+        }
+        body.dark-mode h1 {
+            color: #f0f0f0;
+        }
+        body.dark-mode #controls {
+            background-color: #2a2a2a;
+            border-bottom: 1px solid #333;
+        }
+        body.dark-mode #chart-container {
+            background-color: #2a2a2a;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        /* Estilização de INPUT e SELECT no TEMA ESCURO */
+        body.dark-mode #controls select, 
+        body.dark-mode #controls input[type="text"],
+        body.dark-mode #controls input[type="time"] {
+            background-color: #333;
+            color: #f0f0f0;
+            border: 1px solid #555;
+        }
+        /* Estilização do LABEL no TEMA ESCURO (apenas texto) */
+        body.dark-mode #controls label {
+            color: #f0f0f0;
+            background: none;
+            border: none;
+        }
+        body.dark-mode #controls button {
+            background-color: #387c3a;
+        }
+        body.dark-mode #controls button:hover {
+            background-color: #4CAF50;
+        }
+        
+        /* Estilização do DETALHE DO EVENTO no TEMA ESCURO */
+        body.dark-mode #event-details {
+            background-color: #2a2a2a;
+            border: 1px solid #333;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+        body.dark-mode #event-details h3 {
+            color: #f0f0f0;
+            border-bottom: 1px solid #555;
+        }
+        body.dark-mode #event-details p {
+            color: #ccc;
+        }
+        body.dark-mode #event-details strong {
+            color: #f0f0f0;
+        }
 
 
-        /* ------------------------------------------------------------------
-           SWITCH TEMA (Botão Deslizante)
-           ------------------------------------------------------------------ */
-        .theme-switch-wrapper {
-            display: flex;
-            align-items: center;
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 0.9em;
-            color: inherit; /* Garante que o texto se adapte ao tema */
-        }
-        .theme-switch {
-            display: inline-block;
-            height: 20px;
-            position: relative;
-            width: 40px;
-            margin-left: 10px;
-        }
-        .theme-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        .slider {
-            background-color: #ccc;
-            bottom: 0;
-            cursor: pointer;
-            left: 0;
-            right: 0;
-            top: 0;
-            position: absolute;
-            transition: 0.4s;
-            border-radius: 20px;
-        }
-        .slider:before {
-            background-color: white;
-            bottom: 2px;
-            content: "";
-            height: 16px;
-            left: 2px;
-            position: absolute;
-            transition: 0.4s;
-            width: 16px;
-            border-radius: 50%;
-        }
-        input:checked + .slider {
-            background-color: #2196f3;
-        }
-        input:checked + .slider:before {
-            transform: translateX(20px);
-        }
-    </style>
+        /* ------------------------------------------------------------------
+           SWITCH TEMA (Botão Deslizante)
+           ------------------------------------------------------------------ */
+        .theme-switch-wrapper {
+            display: flex;
+            align-items: center;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 0.9em;
+            color: inherit; /* Garante que o texto se adapte ao tema */
+        }
+        .theme-switch {
+            display: inline-block;
+            height: 20px;
+            position: relative;
+            width: 40px;
+            margin-left: 10px;
+        }
+        .theme-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            background-color: #ccc;
+            bottom: 0;
+            cursor: pointer;
+            left: 0;
+            right: 0;
+            top: 0;
+            position: absolute;
+            transition: 0.4s;
+            border-radius: 20px;
+        }
+        .slider:before {
+            background-color: white;
+            bottom: 2px;
+            content: "";
+            height: 16px;
+            left: 2px;
+            position: absolute;
+            transition: 0.4s;
+            width: 16px;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #2196f3;
+        }
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+    </style>
 </head>
 <body>
-    <div class="theme-switch-wrapper">
-        <span>Tema Escuro</span>
-        <label class="theme-switch" for="checkbox">
-            <input type="checkbox" id="checkbox" />
-            <div class="slider"></div>
-        </label>
-    </div>
+    <div class="theme-switch-wrapper">
+        <span>Tema Escuro</span>
+        <label class="theme-switch" for="checkbox">
+            <input type="checkbox" id="checkbox" />
+            <div class="slider"></div>
+        </label>
+    </div>
 
-    <h1>🖥️ Monitor de conexão com o Google Meet 📊</h1>
+    <h1>🖥️ Monitor de conexão com o Google Meet 📊</h1>
 
-    <div id="controls">
-        <label for="osSelect">Sistema Operacional:</label>
-        <select id="osSelect">
-            <option value="MacOS">Mac</option>
-            <option value="Windows">Windows</option>
-        </select>
+    <div id="controls">
+        <label for="osSelect">Sistema Operacional:</label>
+        <select id="osSelect">
+            <option value="MacOS">Mac</option>
+            <option value="Windows">Windows</option>
+        </select>
 
-        <label for="dateSelect">Data do Log:</label>
-        <input type="text" id="dateSelect" pattern="\d{2}-\d{2}-\d{2}" placeholder="DD-MM-YY">
-        
-        <label for="hostnameFilter">Hostname:</label>
-        <input type="text" id="hostnameFilter" placeholder="Ex: ARCO-CD28F..." oninput="filterChart()">
-        
-        <label for="startTime">Início (HH:MM):</label>
-        <input type="time" id="startTime" value="00:00" onchange="filterChart()">
-        
-        <label for="endTime">Fim (HH:MM):</label>
-        <input type="time" id="endTime" value="23:59" onchange="filterChart()">
-        
-        <button onclick="initMonitor()">Carregar Log</button>
-    </div>
+        <label for="dateSelect">Data do Log:</label>
+        <input type="text" id="dateSelect" pattern="\d{2}-\d{2}-\d{2}" placeholder="DD-MM-YY">
+        
+        <label for="hostnameFilter">Hostname:</label>
+        <input type="text" id="hostnameFilter" placeholder="Ex: ARCO-CD28F..." oninput="filterChart()">
+        
+        <label for="startTime">Início (HH:MM):</label>
+        <input type="time" id="startTime" value="00:00" onchange="filterChart()">
+        
+        <label for="endTime">Fim (HH:MM):</label>
+        <input type="time" id="endTime" value="23:59" onchange="filterChart()">
+        
+        <button onclick="initMonitor()">Carregar Log</button>
+    </div>
 
-    <div id="chart-container">
-        <canvas id="qualityChart"></canvas>
-        <p id="statusMessage" style="text-align:center; font-weight: bold;"></p>
-    </div>
+    <div id="chart-container">
+        <canvas id="qualityChart"></canvas>
+        <p id="statusMessage" style="text-align:center; font-weight: bold;"></p>
+    </div>
 
-    <div id="event-details">
-        <h3 style="margin-top: 0;">Detalhes do Evento</h3>
-        <div id="event-content">
-            Clique em um ponto do gráfico para ver os detalhes de troubleshooting.
-        </div>
-    </div>
-    <script src="script.js"></script>
+    <div id="event-details">
+        <h3 style="margin-top: 0;">Detalhes do Evento</h3>
+        <div id="event-content">
+            Clique em um ponto do gráfico para ver os detalhes de troubleshooting.
+        </div>
+    </div>
+    <script src="script.js"></script>
 
 </body>
 </html>
