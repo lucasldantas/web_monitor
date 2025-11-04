@@ -1,263 +1,410 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🖥️ Monitor de conexão com o Google Meet 📊</title>
+let allData = [];
+let chartInstance = null;
+let currentDataToDisplay = []; 
+const AUTO_UPDATE_INTERVAL = 10 * 60 * 1000; // 10 minutos em milissegundos
+let autoUpdateTimer = null; 
+
+// --------------------------------------------------------------------------
+// Funções Auxiliares
+// --------------------------------------------------------------------------
+
+function getCurrentDateFormatted() {
+    const today = new Date();
+    const dd = String(today.getDate()).padStart(2, '0');
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const yy = String(today.getFullYear()).slice(-2);
+    return `${dd}-${mm}-${yy}`;
+}
+
+function mapScore(status) {
+    if (!status) return 0;
+    // Adicionado 'Aceitável' para mapear um valor intermediário (75)
+    if (status.toLowerCase() === 'aceitável') return 75; 
+
+    switch (status.toLowerCase()) {
+        case 'excelente': return 100;
+        case 'bom': return 75;
+        case 'ruim': return 25;
+        default: return 0; 
+    }
+}
+
+function getFileName() {
+    const os = document.getElementById('osSelect').value;
+    const date = document.getElementById('dateSelect').value;
+    return `log_meet_monitoring_${os}_${date}.csv`;
+}
+
+// --------------------------------------------------------------------------
+// Lógica de Tema e Inicialização
+// --------------------------------------------------------------------------
+
+function toggleDarkMode() {
+    const isDark = document.body.classList.toggle('dark-mode');
+    localStorage.setItem('darkMode', isDark);
+    updateChartTheme(isDark);
+}
+
+function applySavedTheme() {
+    const savedTheme = localStorage.getItem('darkMode');
+    const checkbox = document.getElementById('checkbox');
+    
+    if (savedTheme === 'true') {
+        document.body.classList.add('dark-mode');
+        checkbox.checked = true;
+    }
+    
+    checkbox.addEventListener('change', toggleDarkMode);
+    updateChartTheme(savedTheme === 'true');
+}
+
+function startAutoUpdate() {
+    if (autoUpdateTimer) {
+        clearInterval(autoUpdateTimer);
+    }
+    
+    autoUpdateTimer = setInterval(() => {
+        const timestamp = new Date().toLocaleTimeString();
+        console.log(`Autoatualizando dados em ${timestamp}...`);
+        initMonitor();
+    }, AUTO_UPDATE_INTERVAL);
+
+    console.log(`Autoatualização configurada para cada ${AUTO_UPDATE_INTERVAL / 60000} minutos.`);
+}
+
+window.onload = function() {
+    applySavedTheme();
+    document.getElementById('dateSelect').value = getCurrentDateFormatted();
+    
+    document.getElementById('osSelect').addEventListener('change', initMonitor);
+    document.getElementById('dateSelect').addEventListener('change', initMonitor);
     
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-    
-    <style>
-        /* ------------------------------------------------------------------
-           CSS GERAL / CLARO
-           ------------------------------------------------------------------ */
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f9;
-            color: #333;
-            transition: background-color 0.3s, color 0.3s;
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-            margin-top: 20px;
-        }
-        #controls {
-            text-align: center;
-            margin: 20px 0;
-            padding: 15px;
-            background-color: #fff;
-            border-bottom: 1px solid #ddd;
-            display: flex; 
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 10px;
-            transition: background-color 0.3s, border-color 0.3s;
-        }
-        #chart-container {
-            width: 90%;
-            margin: 30px auto;
-            background-color: #fff;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            border-radius: 8px;
-            max-height: 500px;
-            transition: background-color 0.3s, box-shadow 0.3s;
-        }
-        
-        /* ESTILIZAÇÃO DO DETALHE DO EVENTO */
-        #event-details {
-            width: 90%; 
-            margin: 20px auto; 
-            padding: 15px; 
-            background-color: #fff; 
-            border: 1px solid #ddd; 
-            border-radius: 8px; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            display: none;
-            transition: background-color 0.3s, border-color 0.3s;
-        }
-        #event-details h3 {
-            margin-top: 0; 
-            border-bottom: 1px solid #eee; 
-            padding-bottom: 5px;
-            color: #333;
-        }
-        
-        /* Estilização de inputs, select e button */
-        #controls button, 
-        #controls select, 
-        #controls input[type="text"],
-        #controls input[type="time"] { 
-            font-size: 1em;
-            padding: 5px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-            background-color: #fff;
-            color: #333;
-        }
-        
-        /* Estilização para o LABEL (apenas texto) */
-        #controls label {
-            display: flex;
-            align-items: center;
-            padding: 5px 0;
-            font-size: 1em;
-            border: none;
-            background: none;
-        }
-        
-        #controls input[type="text"] { min-width: 150px; }
-        #controls button {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        #controls button:hover { background-color: #45a049; }
-        #qualityChart { max-height: 460px; }
+    // Adicionado listeners para os filtros de tempo e hostname
+    document.getElementById('startTime').addEventListener('change', filterChart);
+    document.getElementById('endTime').addEventListener('change', filterChart);
+    document.getElementById('hostnameFilter').addEventListener('input', filterChart);
+
+    initMonitor(); 
+    startAutoUpdate();
+}
+
+// --------------------------------------------------------------------------
+// Lógica de Detalhe de Evento (CORRIGIDA)
+// --------------------------------------------------------------------------
+
+function displayEventDetails(dataRow) {
+    const detailsContainer = document.getElementById('event-details');
+    const content = document.getElementById('event-content');
+
+    // Campos principais
+    const primaryFields = [
+        { label: "Timestamp", key: "Timestamp" },
+        { label: "Hostname", key: "Hostname" },
+        { label: "Usuário Logado", key: "UserLogged" },
+        { label: "IP Público", key: "IP_Publico" },
+        { label: "Provedor", key: "Provedor" },
+        { label: "Latência TCP (ms)", key: "TCP_Latency_ms" },
+        { label: "Status da Conexão", key: "Connection_Health_Status" },
+    ];
+
+    let html = '';
+    
+    // 1. Adiciona campos principais
+    primaryFields.forEach(field => {
+        const value = dataRow[field.key] || 'N/A';
+        html += `<p><strong>${field.label}:</strong> ${value}</p>`;
+    });
+
+    // 2. Adiciona Hops Dinamicamente
+    html += `<h4 style="margin-top: 15px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Detalhes do Rastreamento (Hops)</h4>`;
+
+    let foundHops = false;
+    for (let i = 1; i <= 30; i++) { // Verifica até o Hop 30 (ajuste se necessário)
+        const ipKey = `Hop_${i}_IP`;
+        const latencyKey = `Hop_${i}_Latency_ms`;
+
+        const ip = dataRow[ipKey];
+        const latency = dataRow[latencyKey];
+        
+        // Verifica se o Hop tem IP ou Latência e não é um valor vazio do CSV
+        if (ip || latency) {
+            const ipValue = ip && ip.trim() !== '' ? ip : 'N/A';
+            const latencyValue = latency && latency.trim() !== '' ? `${latency} ms` : 'N/A';
+            
+            // Só exibe se pelo menos um dos valores for relevante
+            if (ipValue !== 'N/A' || latencyValue !== 'N/A') {
+                html += `<p style="margin-top: 5px; margin-bottom: 5px;"><strong>Hop ${i}:</strong> ${ipValue} (${latencyValue})</p>`;
+                foundHops = true;
+            }
+        }
+    }
+    
+    // Se nenhum Hop foi encontrado (além da mensagem do H4), adiciona uma nota
+    if (!foundHops) {
+        html += `<p style="color: #999;">Nenhum dado detalhado de rastreamento de rota encontrado neste registro.</p>`;
+    }
+
+    content.innerHTML = html;
+    detailsContainer.style.display = 'block';
+}
+
+function handleChartClick(event) {
+    const points = chartInstance.getElementsAtEventForMode(event, 'index', { intersect: true }, false);
+
+    if (points.length === 0) {
+        document.getElementById('event-details').style.display = 'none';
+        return;
+    }
+
+    const dataIndex = points[0].index;
+    const clickedRow = currentDataToDisplay[dataIndex];
+
+    if (clickedRow) {
+        displayEventDetails(clickedRow);
+    }
+}
+
+// --------------------------------------------------------------------------
+// Lógica de Gráfico
+// --------------------------------------------------------------------------
+
+function updateChartTheme(isDark) {
+    if (chartInstance) {
+        const dataToRedraw = currentDataToDisplay;
+        currentDataToDisplay = [];
+        drawChart(dataToRedraw); 
+    }
+}
 
 
-        /* ------------------------------------------------------------------
-           CSS TEMA ESCURO
-           ------------------------------------------------------------------ */
-        body.dark-mode {
-            background-color: #1e1e1e;
-            color: #f0f0f0;
-        }
-        body.dark-mode h1 {
-            color: #f0f0f0;
-        }
-        body.dark-mode #controls {
-            background-color: #2a2a2a;
-            border-bottom: 1px solid #333;
-        }
-        body.dark-mode #chart-container {
-            background-color: #2a2a2a;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-        }
-        /* Estilização de INPUT e SELECT no TEMA ESCURO */
-        body.dark-mode #controls select, 
-        body.dark-mode #controls input[type="text"],
-        body.dark-mode #controls input[type="time"] {
-            background-color: #333;
-            color: #f0f0f0;
-            border: 1px solid #555;
-        }
-        /* Estilização do LABEL no TEMA ESCURO (apenas texto) */
-        body.dark-mode #controls label {
-            color: #f0f0f0;
-            background: none;
-            border: none;
-        }
-        body.dark-mode #controls button {
-            background-color: #387c3a;
-        }
-        body.dark-mode #controls button:hover {
-            background-color: #4CAF50;
-        }
-        
-        /* Estilização do DETALHE DO EVENTO no TEMA ESCURO */
-        body.dark-mode #event-details {
-            background-color: #2a2a2a;
-            border: 1px solid #333;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
-        }
-        body.dark-mode #event-details h3 {
-            color: #f0f0f0;
-            border-bottom: 1px solid #555;
-        }
-        body.dark-mode #event-details p {
-            color: #ccc;
-        }
-        body.dark-mode #event-details strong {
-            color: #f0f0f0;
-        }
+function drawChart(dataToDisplay) {
+    const statusElement = document.getElementById('statusMessage');
+
+    if (chartInstance) {
+        chartInstance.destroy();
+    }
+    
+    currentDataToDisplay = dataToDisplay;
+    
+    if (dataToDisplay.length === 0) {
+        statusElement.textContent = "Nenhum dado encontrado no intervalo ou Hostname selecionado.";
+        document.getElementById('event-details').style.display = 'none';
+        return;
+    }
+
+    statusElement.textContent = ""; 
+    
+    const labels = [];
+    const dataScores = [];
+    const dataLatency = []; 
+    const scorePointColors = [];
+    
+    const isDark = document.body.classList.contains('dark-mode');
+    const color = isDark ? '#f0f0f0' : '#333';
+    const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+    const latencyColor = isDark ? '#FF6384' : '#E84A5F';
+
+    let maxLatency = 0;
+
+    dataToDisplay.forEach(row => {
+        const timestamp = row.Timestamp;
+        const scoreStatus = row['Connection_Health_Status'];
+        const score = mapScore(scoreStatus);
+        const latency = parseFloat(row['TCP_Latency_ms']) || 0; 
+        
+        const timeOnly = timestamp.split(' ')[1]; 
+        labels.push(timeOnly.substring(0, 5));
+        dataScores.push(score);
+        dataLatency.push(latency); 
+
+        if (latency > maxLatency) maxLatency = latency;
+
+        if (score === 100) scorePointColors.push('#4BC0C0');
+        else if (score === 75) scorePointColors.push('#FFCD56');
+        else scorePointColors.push('#FF6384'); 
+    });
+
+    const latencyMaxScale = Math.ceil((maxLatency + 100) / 500) * 500; 
+
+    const ctx = document.getElementById('qualityChart').getContext('2d');
+
+    chartInstance = new Chart(ctx, { 
+        type: 'line', 
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Qualidade (Score)',
+                    data: dataScores,
+                    yAxisID: 'y-score', 
+                    borderColor: isDark ? '#A0D8FF' : '#36A2EB',
+                    backgroundColor: isDark ? 'rgba(160, 216, 255, 0.2)' : 'rgba(54, 162, 235, 0.2)',
+                    pointBackgroundColor: scorePointColors,
+                    tension: 0.3, 
+                    pointRadius: 5,
+                    borderWidth: 2,
+                    fill: false,
+                    order: 1
+                },
+                {
+                    label: 'Latência (ms)',
+                    data: dataLatency,
+                    yAxisID: 'y-latency', 
+                    borderColor: latencyColor,
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                    tension: 0.3,
+                    pointRadius: 3,
+                    borderWidth: 2,
+                    fill: false,
+                    order: 2
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            color: color, 
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            onClick: handleChartClick,
+            scales: {
+                x: {
+                    title: { display: true, text: 'Horário do Monitoramento (HH:MM)', color: color },
+                    grid: { color: gridColor },
+                    ticks: { color: color }
+                },
+                'y-score': { 
+                    type: 'linear',
+                    position: 'left',
+                    title: { display: true, text: 'Qualidade (Score)', color: color },
+                    min: 0,
+                    max: 100,
+                    grid: { color: gridColor },
+                    ticks: { 
+                        stepSize: 25, 
+                        color: color,
+                        callback: function(value) {
+                            if (value === 100) return 'Excelente';
+                            if (value === 75) return 'Bom';
+                            if (value === 25) return 'Ruim';
+                            if (value === 0) return 'Falha/Outro';
+                            return '';
+                        }
+                    }
+                },
+                'y-latency': { 
+                    type: 'linear',
+                    position: 'right', 
+                    title: { display: true, text: 'Latência TCP (ms)', color: latencyColor },
+                    min: 0,
+                    max: latencyMaxScale, 
+                    grid: { 
+                        drawOnChartArea: false, 
+                        color: gridColor
+                    },
+                    ticks: {
+                        color: latencyColor
+                    }
+                }
+            },
+            plugins: {
+                title: { display: true, text: `Evolução da Qualidade e Latência`, color: color },
+                legend: { labels: { color: color } },
+                // 🚀 ADIÇÃO DA LINHA DE REFERÊNCIA DE 100MS
+                annotation: {
+                    annotations: {
+                        line100ms: {
+                            type: 'line',
+                            scaleID: 'y-latency',
+                            value: 100, // Valor de 100ms
+                            borderColor: 'red',
+                            borderWidth: 2,
+                            borderDash: [6, 6], // Linha tracejada
+                            label: {
+                                display: true,
+                                content: 'Limite 100ms',
+                                position: 'end',
+                                backgroundColor: 'rgba(255, 0, 0, 0.7)',
+                                color: 'white',
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
 
 
-        /* ------------------------------------------------------------------
-           SWITCH TEMA (Botão Deslizante)
-           ------------------------------------------------------------------ */
-        .theme-switch-wrapper {
-            display: flex;
-            align-items: center;
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 0.9em;
-            color: inherit; /* Garante que o texto se adapte ao tema */
-        }
-        .theme-switch {
-            display: inline-block;
-            height: 20px;
-            position: relative;
-            width: 40px;
-            margin-left: 10px;
-        }
-        .theme-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        .slider {
-            background-color: #ccc;
-            bottom: 0;
-            cursor: pointer;
-            left: 0;
-            right: 0;
-            top: 0;
-            position: absolute;
-            transition: 0.4s;
-            border-radius: 20px;
-        }
-        .slider:before {
-            background-color: white;
-            bottom: 2px;
-            content: "";
-            height: 16px;
-            left: 2px;
-            position: absolute;
-            transition: 0.4s;
-            width: 16px;
-            border-radius: 50%;
-        }
-        input:checked + .slider {
-            background-color: #2196f3;
-        }
-        input:checked + .slider:before {
-            transform: translateX(20px);
-        }
-    </style>
-</head>
-<body>
-    <div class="theme-switch-wrapper">
-        <span>Tema Escuro</span>
-        <label class="theme-switch" for="checkbox">
-            <input type="checkbox" id="checkbox" />
-            <div class="slider"></div>
-        </label>
-    </div>
+function filterChart() {
+    const startTimeStr = document.getElementById('startTime').value;
+    const endTimeStr = document.getElementById('endTime').value;
+    const hostnameFilter = document.getElementById('hostnameFilter').value.trim();
 
-    <h1>🖥️ Monitor de conexão com o Google Meet 📊</h1>
+    if (!allData || allData.length === 0) {
+        currentDataToDisplay = [];
+        return; 
+    }
 
-    <div id="controls">
-        <label for="osSelect">Sistema Operacional:</label>
-        <select id="osSelect">
-            <option value="MacOS">Mac</option>
-            <option value="Windows">Windows</option>
-        </select>
+    const filteredData = allData.filter(row => {
+        const timestamp = row.Timestamp;
+        if (!timestamp) return false;
+        
+        const timeOnly = timestamp.split(' ')[1]; 
+        const filterStart = startTimeStr + ':00';
+        const filterEnd = endTimeStr + ':59';
+        const isWithinTime = timeOnly >= filterStart && timeOnly <= filterEnd;
 
-        <label for="dateSelect">Data do Log:</label>
-        <input type="text" id="dateSelect" pattern="\d{2}-\d{2}-\d{2}" placeholder="DD-MM-YY">
-        
-        <label for="hostnameFilter">Hostname:</label>
-        <input type="text" id="hostnameFilter" placeholder="Ex: ARCO-CD28F..." oninput="filterChart()">
-        
-        <label for="startTime">Início (HH:MM):</label>
-        <input type="time" id="startTime" value="00:00" onchange="filterChart()">
-        
-        <label for="endTime">Fim (HH:MM):</label>
-        <input type="time" id="endTime" value="23:59" onchange="filterChart()">
-        
-        <button onclick="initMonitor()">Carregar Log</button>
-    </div>
+        const hostname = row.Hostname;
+        // Corrigido para verificar se hostname existe antes de chamar toLowerCase
+        const matchesHostname = hostnameFilter === '' || (hostname && hostname.toLowerCase().includes(hostnameFilter.toLowerCase())); 
+        
+        return isWithinTime && matchesHostname;
+    });
 
-    <div id="chart-container">
-        <canvas id="qualityChart"></canvas>
-        <p id="statusMessage" style="text-align:center; font-weight: bold;"></p>
-    </div>
+    document.getElementById('event-details').style.display = 'none';
 
-    <div id="event-details">
-        <h3 style="margin-top: 0;">Detalhes do Evento</h3>
-        <div id="event-content">
-            Clique em um ponto do gráfico para ver os detalhes de troubleshooting.
-        </div>
-    </div>
-    <script src="script.js"></script>
+    drawChart(filteredData);
+}
 
-</body>
-</html>
+function initMonitor() {
+    const statusElement = document.getElementById('statusMessage');
+    const fileName = getFileName();
+
+    statusElement.textContent = `Carregando: ${fileName}...`;
+    allData = []; 
+
+    // Removida a linha de limpeza do hostnameFilter para manter o filtro após o recarregamento, se o usuário já digitou algo.
+    document.getElementById('event-details').style.display = 'none';
+
+    Papa.parse(fileName, {
+        download: true, 
+        header: true,   
+        skipEmptyLines: true,
+        complete: function(results) {
+            
+            allData = results.data.filter(row => row.Timestamp && row['Connection_Health_Status'] && row['TCP_Latency_ms']); 
+
+            if (allData.length === 0) {
+                statusElement.textContent = `Erro: Nenhuma linha de dados válida em ${fileName}.`;
+                if (chartInstance) chartInstance.destroy();
+                return;
+            }
+            
+            statusElement.textContent = `Sucesso! Carregado ${allData.length} registros de ${fileName}.`;
+
+            filterChart(); 
+        },
+        error: function(error) {
+            console.error("Erro ao carregar o CSV:", error);
+            statusElement.textContent = `ERRO 404: Não foi possível encontrar o arquivo ${fileName}. Verifique a data e o nome.`;
+            if (chartInstance) chartInstance.destroy();
+            document.getElementById('event-details').style.display = 'none';
+        }
+    });
+}
